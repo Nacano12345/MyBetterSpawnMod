@@ -3,14 +3,17 @@ package com.proto781m.betterspawn.method;
 import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SpawnContext;
 import com.proto781m.betterspawn.api.SpawnMethod;
+import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import com.proto781m.betterspawn.resolver.SpawnSafetyValidator;
 import com.proto781m.betterspawn.resolver.TerrainScanner;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.PlayerRespawnLogic;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 /**
@@ -60,9 +63,10 @@ public class DefaultSpawnMethod implements SpawnMethod {
         }
 
         // 2. 同心环带
+        String budgetWarning = null;
         for (int radius = ringStep; radius <= maxRadius; radius += ringStep) {
             radiusReached = radius;
-            int count = clamp(radius / 16, 8, 48);
+            int count = clamp(radius / 4, 16, 64);
             int accepted = 0;
             for (int i = 0; i < count; i++) {
                 double radians = (Math.PI * 2.0) * (i + 0.5) / count;
@@ -86,13 +90,57 @@ public class DefaultSpawnMethod implements SpawnMethod {
                         List.of("搜索超时"));
             }
             if (scanner.budgetExhausted()) {
-                return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
-                        List.of("区块加载预算耗尽（" + maxChunkLoads + "），未找到安全点"));
+                budgetWarning = "区块加载预算耗尽（" + maxChunkLoads + "），尝试原版气候采样兜底";
+                break;
+            }
+        }
+
+        // 3. 原版气候采样兜底：海里/大范围无陆地时，用原版 findSpawnPosition 选气候合适的区块
+        if (ctx.rule().getBool("vanilla_fallback", true)
+                && System.currentTimeMillis() < ctx.deadlineMillis()) {
+            BlockPos vanilla = findVanillaSpawn(level, ctx);
+            if (vanilla != null) {
+                return new ResolveResult(vanilla, dimension, angle, id(), false, 0L,
+                        scanner.samples(), radiusReached, ResolveResult.Status.OK,
+                        List.of("使用原版气候采样兜底"));
             }
         }
 
         return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
-                List.of("在半径 " + maxRadius + " 内未找到安全点"));
+                budgetWarning != null
+                        ? List.of(budgetWarning, "原版气候采样兜底也未找到安全点")
+                        : List.of("在半径 " + maxRadius + " 内未找到安全点，原版气候采样兜底也未找到"));
+    }
+
+    private static BlockPos findVanillaSpawn(ServerLevel level, SpawnContext ctx) {
+        try {
+            // 原版出生点气候采样：不生成区块，只选一个气候合适的候选区块
+            ChunkPos origin = new ChunkPos(
+                    level.getChunkSource().randomState().sampler().findSpawnPosition());
+
+            // 原版本身会在 11x11 区块范围内找安全落点；这里做同样的事
+            for (int radius = 0; radius <= 5; radius++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
+                            continue;
+                        }
+                        if (System.currentTimeMillis() > ctx.deadlineMillis()) {
+                            return null;
+                        }
+
+                        BlockPos pos = PlayerRespawnLogic.getSpawnPosInChunk(level,
+                                new ChunkPos(origin.x + dx, origin.z + dz));
+                        if (pos != null && SpawnSafetyValidator.isSafe(level, pos)) {
+                            return pos;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            BetterSpawn.LOGGER.warn("原版气候采样兜底失败: {}", ex.toString());
+        }
+        return null;
     }
 
     private static ResolveResult ok(ServerLevel level, ResourceKey<Level> dimension, BlockPos pos,
