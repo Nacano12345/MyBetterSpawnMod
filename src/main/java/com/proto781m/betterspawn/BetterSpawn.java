@@ -5,6 +5,7 @@ import com.proto781m.betterspawn.api.SpawnMethodRegistry;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import com.proto781m.betterspawn.method.DefaultSpawnMethod;
 import com.proto781m.betterspawn.method.FixedSpawnMethod;
+import com.proto781m.betterspawn.method.FlexPlatformSpawnMethod;
 import com.proto781m.betterspawn.method.FloatingIslandSpawnMethod;
 import com.proto781m.betterspawn.method.PlatformSpawnMethod;
 import com.proto781m.betterspawn.method.TopSpawnMethod;
@@ -49,6 +50,7 @@ public class BetterSpawn {
         SpawnMethodRegistry.register(new DefaultSpawnMethod());
         SpawnMethodRegistry.register(new TopSpawnMethod());
         SpawnMethodRegistry.register(new FixedSpawnMethod());
+        SpawnMethodRegistry.register(new FlexPlatformSpawnMethod());
         SpawnMethodRegistry.register(new FloatingIslandSpawnMethod());
         SpawnMethodRegistry.register(new WaterWorldSpawnMethod());
         SpawnMethodRegistry.register(PlatformSpawnMethod.INSTANCE);

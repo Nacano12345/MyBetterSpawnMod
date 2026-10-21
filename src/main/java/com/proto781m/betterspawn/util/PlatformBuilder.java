@@ -1,44 +1,63 @@
 package com.proto781m.betterspawn.util;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 保底平台生成器：当所有搜索方法都找不到有效位置时，在指定坐标直接搭建一个平台。
- *
- * <p>平台是一个以 {@code center} 为中心、边长 {@code size} 的正方形，材质由参数指定。
- * 生成后平台上方会留出至少 2 格空气，保证玩家可以站立。
+ * 平台生成器：在指定坐标搭建一个平台，并清理上方空间。
  */
 public final class PlatformBuilder {
 
     private PlatformBuilder() {
     }
 
-    /**
-     * 在 {@code center} 处搭建平台。
-     *
-     * @param center 平台中心所在的方块位置（即地面层）
-     * @param size   平台边长（建议 3 或 5）
-     * @param state  平台方块的 BlockState
-     */
+    /** 解析方块 id；无效或空气时回退到石头。 */
+    public static BlockState resolveState(String materialId) {
+        try {
+            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(materialId));
+            if (block == null || block == Blocks.AIR) {
+                return Blocks.STONE.defaultBlockState();
+            }
+            return block.defaultBlockState();
+        } catch (Exception ex) {
+            return Blocks.STONE.defaultBlockState();
+        }
+    }
+
+    /** 在 {@code center} 处搭建平台，默认清理上方 2 格。 */
     public static void build(ServerLevel level, BlockPos center, int size, BlockState state) {
+        build(level, center, size, state, 2);
+    }
+
+    /**
+     * 在 {@code center} 处搭建平台，并清理上方 {@code clearHeight} 格。
+     *
+     * @param center      平台中心地面层
+     * @param size        平台边长（建议奇数）
+     * @param state       平台方块
+     * @param clearHeight 平台上方需要保留的空气高度
+     */
+    public static void build(ServerLevel level, BlockPos center, int size, BlockState state, int clearHeight) {
         int half = size / 2;
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
                 level.setBlockAndUpdate(center.offset(dx, 0, dz), state);
             }
         }
-        // 清理平台上方的遮挡物，保证 2 格站立空间
+
+        // 清理平台上方的遮挡物，保证玩家/传送门有足够净空
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
-                BlockPos above = center.offset(dx, 1, dz);
-                if (!level.getBlockState(above).isAir()) {
-                    level.removeBlock(above, false);
-                }
-                BlockPos above2 = center.offset(dx, 2, dz);
-                if (!level.getBlockState(above2).isAir()) {
-                    level.removeBlock(above2, false);
+                for (int dy = 1; dy <= clearHeight; dy++) {
+                    BlockPos above = center.offset(dx, dy, dz);
+                    if (!level.getBlockState(above).isAir()) {
+                        level.removeBlock(above, false);
+                    }
                 }
             }
         }

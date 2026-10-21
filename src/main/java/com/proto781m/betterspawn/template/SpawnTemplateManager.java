@@ -57,23 +57,31 @@ public final class SpawnTemplateManager {
                 )
         ));
 
-        // 地狱：top 方法
+        // 地狱：flex_platform 方法（寻找可建传送门的位置，失败则生成平台）
         defaults.put(ResourceLocation.parse("minecraft:the_nether"), new SpawnRule(
                 ResourceLocation.parse("minecraft:the_nether"),
-                "top",
-                Map.of(
-                        "min_y", 32,
-                        "max_y", 127,
-                        "center_x", 0,
-                        "center_z", 0,
-                        "search_radius", 128,
-                        "ring_step", 32,
-                        "avoid_lava", true
+                "flex_platform",
+                Map.ofEntries(
+                        Map.entry("center_x", 0),
+                        Map.entry("center_z", 0),
+                        Map.entry("min_y", 32),
+                        Map.entry("max_y", 127),
+                        Map.entry("search_radius", 256),
+                        Map.entry("ring_step", 32),
+                        Map.entry("avoid_lava", true),
+                        Map.entry("portal_width", 2),
+                        Map.entry("portal_height", 3),
+                        Map.entry("build_platform", true),
+                        Map.entry("platform_x", 0),
+                        Map.entry("platform_y", 64),
+                        Map.entry("platform_z", 0),
+                        Map.entry("platform_size", 5),
+                        Map.entry("platform_material", "minecraft:netherrack")
                 ),
                 "platform",
                 Map.of(
                         "x", 0, "y", 64, "z", 0,
-                        "size", 3,
+                        "size", 5,
                         "material", "minecraft:netherrack"
                 )
         ));

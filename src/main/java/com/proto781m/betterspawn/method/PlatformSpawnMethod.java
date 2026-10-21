@@ -10,14 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -74,7 +70,7 @@ public class PlatformSpawnMethod implements SpawnMethod {
                     List.of("无法加载平台所在区块 [" + (center.getX() >> 4) + ", " + (center.getZ() >> 4) + "]"));
         }
 
-        BlockState state = resolveState(materialId);
+        BlockState state = PlatformBuilder.resolveState(materialId);
         List<String> warnings = new ArrayList<>();
         warnings.add("平台方法：material=" + materialId + ", size=" + size);
 
@@ -90,18 +86,6 @@ public class PlatformSpawnMethod implements SpawnMethod {
         BlockPos standPos = center.above();
         return new ResolveResult(standPos, dimension, rng.nextFloat() * 360.0F, id(), false, 0L,
                 scanner.samples(), 0, ResolveResult.Status.OK, warnings);
-    }
-
-    private static BlockState resolveState(String materialId) {
-        try {
-            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(materialId));
-            if (block == null || block == Blocks.AIR) {
-                return Blocks.STONE.defaultBlockState();
-            }
-            return block.defaultBlockState();
-        } catch (Exception ex) {
-            return Blocks.STONE.defaultBlockState();
-        }
     }
 
     private static com.proto781m.betterspawn.template.SpawnRule defaultRule(ServerLevel level) {

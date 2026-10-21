@@ -6,13 +6,14 @@ per-dimension spawn system.
 ## Features
 
 - **JSON spawn templates** in `data/<namespace>/spawn_rules/` (a built-in template for the
-  three vanilla dimensions is always available).
+  three vanilla dimensions is always available; the Nether defaults to `flex_platform`).
 - **Six spawn methods**:
   | id | purpose |
   |---|---|
   | `default` | Overworld-style ring search for the nearest safe land. |
   | `top` | Nether-style search downwards from the ceiling. |
   | `fixed` | Use an exact `x/y/z`, optionally with a safety check. |
+  | `flex_platform` | Finds a flat, safe Nether site that fits a 2×3 portal interior; optionally builds a cleared platform if no natural site exists. |
   | `floating_island` | Wider ring search with a configurable minimum radius. |
   | `water_world` | Treats fluids as air and finds solid ground, preferring dry land. |
   | `platform` | Builds a platform as the final fallback. |

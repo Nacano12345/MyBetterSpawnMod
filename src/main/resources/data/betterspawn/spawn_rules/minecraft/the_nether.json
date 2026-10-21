@@ -1,22 +1,30 @@
 {
   "dimension": "minecraft:the_nether",
-  "method": "top",
+  "method": "flex_platform",
   "parameters": {
-    "min_y": 32,
-    "max_y": 127,
     "center_x": 0,
     "center_z": 0,
-    "search_radius": 128,
+    "min_y": 32,
+    "max_y": 127,
+    "search_radius": 256,
     "ring_step": 32,
     "avoid_lava": true,
-    "max_chunk_loads": 64
+    "portal_width": 2,
+    "portal_height": 3,
+    "build_platform": true,
+    "platform_x": 0,
+    "platform_y": 64,
+    "platform_z": 0,
+    "platform_size": 5,
+    "platform_material": "minecraft:netherrack",
+    "max_chunk_loads": 128
   },
   "fallback": "platform",
   "fallback_parameters": {
     "x": 0,
     "y": 64,
     "z": 0,
-    "size": 3,
+    "size": 5,
     "material": "minecraft:netherrack"
   }
 }
