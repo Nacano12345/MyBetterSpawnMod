@@ -2,7 +2,6 @@ package com.proto781m.betterspawn.template;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.proto781m.betterspawn.BetterSpawn;
 import java.util.HashMap;
@@ -24,10 +23,10 @@ public final class SpawnTemplateLoader {
         try {
             JsonObject obj = element.getAsJsonObject();
             if (!obj.has("dimension")) {
-                throw new IllegalArgumentException("缺少 dimension 字段");
+                throw new IllegalArgumentException("Missing dimension field");
             }
             if (!obj.has("method")) {
-                throw new IllegalArgumentException("缺少 method 字段");
+                throw new IllegalArgumentException("Missing method field");
             }
 
             ResourceLocation dimension = ResourceLocation.parse(obj.get("dimension").getAsString());
@@ -76,8 +75,4 @@ public final class SpawnTemplateLoader {
         return result;
     }
 
-    /** 便捷方法：直接把字符串解析为规则。 */
-    public static SpawnRule parse(ResourceLocation id, String json) {
-        return load(id, JsonParser.parseString(json));
-    }
 }

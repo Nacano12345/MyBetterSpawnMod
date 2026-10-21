@@ -111,16 +111,16 @@ public class CaveSpawnMethod implements SpawnMethod {
 
             if (scanner.timedOut()) {
                 return failed(dimension, samples, radiusReached, ResolveResult.Status.TIMEOUT,
-                        List.of("搜索超时"));
+                        List.of("Search timed out"));
             }
             if (scanner.budgetExhausted()) {
                 return failed(dimension, samples, radiusReached, ResolveResult.Status.UNSAFE,
-                        List.of("区块加载预算耗尽（" + maxChunkLoads + "），未找到洞穴"));
+                        List.of("Chunk budget exhausted (" + maxChunkLoads + "); no cave found"));
             }
         }
 
         return failed(dimension, samples, radiusReached, ResolveResult.Status.UNSAFE,
-                List.of("在半径 " + searchRadius + " 内未找到带岩顶的洞穴"));
+                List.of("No cave with a roof found within radius " + searchRadius));
     }
 
     private record CaveSite(BlockPos feet, int airHeight, int roofY) {
@@ -183,7 +183,7 @@ public class CaveSpawnMethod implements SpawnMethod {
     private ResolveResult result(ServerLevel level, ResourceKey<Level> dimension, CaveSite site,
                                  float angle, int samples, int radius) {
         List<String> warnings = new ArrayList<>(SpawnSafetyValidator.validate(level, site.feet()));
-        warnings.add("洞穴顶部 y=" + site.roofY() + "，脚部净空 " + site.airHeight() + " 格");
+        warnings.add("Cave roof y=" + site.roofY() + ", headroom " + site.airHeight() + " blocks");
         return new ResolveResult(site.feet(), dimension, angle, id(), false, 0L,
                 samples, radius, ResolveResult.Status.OK, warnings);
     }

@@ -48,7 +48,4 @@ public record ResolveResult(
         return new ResolveResult(null, null, 0.0F, method, false, 0L, 0, 0, status, List.of());
     }
 
-    public static ResolveResult timeout(String method) {
-        return new ResolveResult(null, null, 0.0F, method, false, 0L, 0, 0, Status.TIMEOUT, List.of("搜索超时"));
-    }
 }

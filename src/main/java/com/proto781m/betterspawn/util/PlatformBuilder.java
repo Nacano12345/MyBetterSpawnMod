@@ -63,8 +63,4 @@ public final class PlatformBuilder {
         }
     }
 
-    /** 生成 3x3 石质平台（默认保底方案）。 */
-    public static void buildDefault(ServerLevel level, BlockPos center) {
-        build(level, center, 3, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
-    }
 }

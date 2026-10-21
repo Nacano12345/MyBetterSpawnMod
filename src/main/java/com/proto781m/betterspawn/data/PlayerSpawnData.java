@@ -181,20 +181,6 @@ public final class PlayerSpawnData {
         }
     }
 
-    /** 玩家是否有任何 Layer 2/3 数据。 */
-    public static boolean hasAnySpawn(ServerPlayer player) {
-        CompoundTag root = root(player);
-        if (root.getList(KEY_DIM_SPAWNS, Tag.TAG_COMPOUND).size() > 0) {
-            return true;
-        }
-        for (SpawnSlotType type : SpawnSlotType.values()) {
-            if (root.contains(type.name())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // ------------------------------------------------------------------
     // 实验性：首次进入世界时应用“出生维度”
     // ------------------------------------------------------------------

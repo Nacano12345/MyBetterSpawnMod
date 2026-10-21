@@ -46,7 +46,8 @@ authors="${mod_authors}"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-A mod that makes the spawn point more useful and flexible.
+A data-driven, per-dimension spawn and respawn system with JSON templates,
+portal-site and cave search, and multi-layer player spawn points.
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.

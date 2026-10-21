@@ -92,28 +92,28 @@ public class WaterWorldSpawnMethod implements SpawnMethod {
 
             if (scanner.timedOut()) {
                 return failed(dimension, scanner, radiusReached, ResolveResult.Status.TIMEOUT,
-                        List.of("搜索超时"));
+                        List.of("Search timed out"));
             }
             if (scanner.budgetExhausted()) {
                 // 预算用尽时，如果已经找到水下候选点，就返回它
                 if (submerged != null) {
                     return result(level, dimension, submerged, angle, scanner, submergedRadius,
-                            List.of("已达到区块加载预算，返回水下/液体中的候选点"));
+                            List.of("Chunk budget reached; returning the submerged/liquid candidate"));
                 }
                 return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
-                        List.of("区块加载预算耗尽（" + maxChunkLoads + "），未找到固体地面"));
+                        List.of("Chunk budget exhausted (" + maxChunkLoads + "); no solid ground found"));
             }
         }
 
         if (submerged != null) {
             List<String> warnings = new ArrayList<>(
                     SpawnSafetyValidator.validate(level, submerged));
-            warnings.add("未找到干燥陆地，返回水下/液体中的固体地面");
+            warnings.add("No dry land found; returning submerged solid ground");
             return result(level, dimension, submerged, angle, scanner, submergedRadius, warnings);
         }
 
         return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
-                List.of("在半径 " + maxRadius + " 内未找到干燥陆地或固体地面"));
+                List.of("No dry land or solid ground found within radius " + maxRadius));
     }
 
     private static ResolveResult result(ServerLevel level, ResourceKey<Level> dimension, BlockPos pos,

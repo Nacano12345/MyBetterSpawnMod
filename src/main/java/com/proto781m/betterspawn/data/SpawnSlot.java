@@ -29,7 +29,4 @@ public record SpawnSlot(
         return new SpawnSlot(type, dimension, pos, angle, true);
     }
 
-    public SpawnSlot withValid(boolean valid) {
-        return new SpawnSlot(type, dimension, pos, angle, valid);
-    }
 }

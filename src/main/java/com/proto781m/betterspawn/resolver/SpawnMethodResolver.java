@@ -52,7 +52,7 @@ public final class SpawnMethodResolver {
         try {
             result = method.resolve(ctx);
         } catch (Exception ex) {
-            BetterSpawn.LOGGER.error("出生点方法 '{}' 在维度 {} 执行失败", id, rule.dimension(), ex);
+            BetterSpawn.LOGGER.error("Spawn method '{}' failed in dimension {}", id, rule.dimension(), ex);
             result = ResolveResult.empty(id, ResolveResult.Status.EMPTY);
         }
         result = withElapsed(result, (System.nanoTime() - start) / 1_000_000L);

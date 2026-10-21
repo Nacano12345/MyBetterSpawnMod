@@ -27,17 +27,17 @@ public final class SpawnSafetyValidator {
     public static List<String> validate(ServerLevel level, BlockPos pos) {
         List<String> warnings = new ArrayList<>();
         if (pos == null) {
-            warnings.add("坐标为空");
+            warnings.add("Position is null");
             return warnings;
         }
         if (!SafePosFinder.isSafeGround(level, pos.below())) {
-            warnings.add("脚下不是稳固方块或处于流体中");
+            warnings.add("Ground is not sturdy or is fluid");
         }
         if (!SafePosFinder.isPassable(level.getBlockState(pos))) {
-            warnings.add("脚部位置被方块占用");
+            warnings.add("Feet position is occupied");
         }
         if (!SafePosFinder.isPassable(level.getBlockState(pos.above()))) {
-            warnings.add("头部位置被方块占用");
+            warnings.add("Head position is occupied");
         }
         // 检查头顶是否有悬空方块遮挡视野（提示，不阻断）
         int blockedAbove = 0;
@@ -47,7 +47,7 @@ public final class SpawnSafetyValidator {
             }
         }
         if (blockedAbove > 0) {
-            warnings.add("上方有 " + blockedAbove + " 格悬空方块，可能遮挡视野");
+            warnings.add(blockedAbove + " blocks above may obstruct the view");
         }
         return warnings;
     }

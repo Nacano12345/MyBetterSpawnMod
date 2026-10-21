@@ -190,10 +190,6 @@ public final class TerrainScanner {
         return samples;
     }
 
-    public int chunkLoads() {
-        return chunkLoads;
-    }
-
     public boolean timedOut() {
         return timedOut;
     }

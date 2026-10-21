@@ -89,10 +89,10 @@ public class DefaultSpawnMethod implements SpawnMethod {
 
             if (scanner.timedOut()) {
                 return failed(dimension, scanner, radiusReached, ResolveResult.Status.TIMEOUT,
-                        List.of("搜索超时"));
+                        List.of("Search timed out"));
             }
             if (scanner.budgetExhausted()) {
-                budgetWarning = "区块加载预算耗尽（" + maxChunkLoads + "），尝试原版气候采样兜底";
+                budgetWarning = "Chunk budget exhausted (" + maxChunkLoads + "); trying vanilla climate fallback";
                 break;
             }
         }
@@ -104,14 +104,14 @@ public class DefaultSpawnMethod implements SpawnMethod {
             if (vanilla != null) {
                 return new ResolveResult(vanilla, dimension, angle, id(), false, 0L,
                         scanner.samples(), radiusReached, ResolveResult.Status.OK,
-                        List.of("使用原版气候采样兜底"));
+                        List.of("Used vanilla climate fallback"));
             }
         }
 
         return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
                 budgetWarning != null
-                        ? List.of(budgetWarning, "原版气候采样兜底也未找到安全点")
-                        : List.of("在半径 " + maxRadius + " 内未找到安全点，原版气候采样兜底也未找到"));
+                        ? List.of(budgetWarning, "Vanilla climate fallback also found no safe point")
+                        : List.of("No safe point within radius " + maxRadius + "; vanilla climate fallback also failed"));
     }
 
     private static BlockPos findSurface(TerrainScanner scanner, int x, int z,

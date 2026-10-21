@@ -80,16 +80,16 @@ public class FloatingIslandSpawnMethod implements SpawnMethod {
 
             if (scanner.timedOut()) {
                 return failed(dimension, scanner, radiusReached, ResolveResult.Status.TIMEOUT,
-                        List.of("搜索超时"));
+                        List.of("Search timed out"));
             }
             if (scanner.budgetExhausted()) {
                 return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
-                        List.of("区块加载预算耗尽（" + maxChunkLoads + "），未找到陆地"));
+                        List.of("Chunk budget exhausted (" + maxChunkLoads + "); no land found"));
             }
         }
 
         return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
-                List.of("在半径 " + maxRadius + " 内未找到陆地"));
+                List.of("No land found within radius " + maxRadius));
     }
 
     private static ResolveResult failed(ResourceKey<Level> dimension, TerrainScanner scanner,

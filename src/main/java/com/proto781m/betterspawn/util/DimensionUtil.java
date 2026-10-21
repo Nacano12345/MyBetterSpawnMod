@@ -2,7 +2,6 @@ package com.proto781m.betterspawn.util;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 /** 维度相关工具。 */
@@ -22,8 +21,4 @@ public final class DimensionUtil {
                 ResourceLocation.parse(id));
     }
 
-    /** 按维度键获取已加载的维度，不存在返回 {@code null}。 */
-    public static ServerLevel level(net.minecraft.server.MinecraftServer server, ResourceKey<Level> key) {
-        return server.getLevel(key);
-    }
 }

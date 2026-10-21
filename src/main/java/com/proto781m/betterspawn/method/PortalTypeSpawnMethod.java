@@ -119,7 +119,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
 
             if (scanner.timedOut()) {
                 return failed(dimension, samples, radiusReached, ResolveResult.Status.TIMEOUT,
-                        List.of("搜索超时"));
+                        List.of("Search timed out"));
             }
             if (scanner.budgetExhausted()) {
                 break;
@@ -133,7 +133,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
         }
 
         return failed(dimension, samples, radiusReached, ResolveResult.Status.UNSAFE,
-                List.of("在半径 " + searchRadius + " 内未找到可建造传送门的位置"));
+                List.of("No portal site found within radius " + searchRadius));
     }
 
     // ------------------------------------------------------------------
@@ -204,10 +204,10 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
                                         int width, int height) {
         BlockPos feet = site.feet();
         List<String> warnings = new ArrayList<>(SpawnSafetyValidator.validate(level, feet));
-        warnings.add("传送门底部框架: " + feet.below()
-                + "，内部 " + width + "x" + height
-                + "，朝向 " + (site.alongX() ? "X+" : "Z+"));
-        warnings.add("出生点位于传送门内部，建造前先离开");
+        warnings.add("Portal bottom frame: " + feet.below()
+                + ", interior " + width + "x" + height
+                + ", facing " + (site.alongX() ? "X+" : "Z+"));
+        warnings.add("Spawn point is inside the portal; step out before building");
         return new ResolveResult(feet, dimension, angle, id(), false, 0L,
                 samples, radius, ResolveResult.Status.OK, warnings);
     }
@@ -233,7 +233,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
         TerrainScanner platformScanner = new TerrainScanner(level, ctx.deadlineMillis(), 1);
         if (!platformScanner.ensureChunk(px, pz)) {
             return failed(dimension, samples, radius, ResolveResult.Status.UNSAFE,
-                    List.of("无法加载平台所在区块 [" + (px >> 4) + ", " + (pz >> 4) + "]"));
+                    List.of("Could not load platform chunk [" + (px >> 4) + ", " + (pz >> 4) + "]"));
         }
 
         BlockState state = PlatformBuilder.resolveState(material);
@@ -243,14 +243,14 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
 
         BlockPos feet = platformCenter.above();
         List<String> warnings = new ArrayList<>();
-        warnings.add("未找到天然传送门位置，已生成 " + size + "x" + size + " 平台："
+        warnings.add("No natural portal site; built a " + size + "x" + size + " platform at "
                 + platformCenter);
-        warnings.add("平台上方已清理 " + clearHeight + " 格，可建造 "
-                + portalWidth + "x" + portalHeight + " 传送门");
+        warnings.add("Cleared " + clearHeight + " blocks above the platform; fits a "
+                + portalWidth + "x" + portalHeight + " portal");
         if (ctx.simulate()) {
-            warnings.add("simulate 模式：未实际生成平台");
+            warnings.add("simulate mode: platform was not built");
         } else if (!SafePosFinder.isSafeStandingPosition(level, feet)) {
-            warnings.add("平台搭建后落脚点仍不安全，请检查高度限制");
+            warnings.add("Platform was built but the standing position is still unsafe; check height limits");
         }
 
         return new ResolveResult(feet, dimension, angle, id(), false, 0L,

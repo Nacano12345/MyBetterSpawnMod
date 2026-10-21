@@ -46,7 +46,7 @@ public class FixedSpawnMethod implements SpawnMethod {
         if (!scanner.ensureChunk(x, z)) {
             return new ResolveResult(null, dimension, angle, id(), false, 0L,
                     scanner.samples(), 0, ResolveResult.Status.UNSAFE,
-                    List.of("无法加载目标区块 [" + (x >> 4) + ", " + (z >> 4) + "]"));
+                    List.of("Could not load target chunk [" + (x >> 4) + ", " + (z >> 4) + "]"));
         }
 
         if (safeCheck && !SpawnSafetyValidator.isSafe(level, pos)) {

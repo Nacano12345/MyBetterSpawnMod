@@ -23,20 +23,4 @@ public class SearchTrace {
         return List.copyOf(rings);
     }
 
-    public int totalCandidates() {
-        return rings.stream().mapToInt(RingTrace::candidates).sum();
-    }
-
-    public int totalAccepted() {
-        return rings.stream().mapToInt(RingTrace::accepted).sum();
-    }
-
-    /** 格式化为多行文本，便于聊天栏/日志输出。 */
-    public String format() {
-        StringBuilder sb = new StringBuilder();
-        for (RingTrace r : rings) {
-            sb.append(String.format("  半径 %d: 候选 %d, 接受 %d%n", r.radius(), r.candidates(), r.accepted()));
-        }
-        return sb.toString();
-    }
 }

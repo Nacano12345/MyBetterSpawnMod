@@ -7,7 +7,7 @@ per-dimension spawn system.
 
 - **JSON spawn templates** in `data/<namespace>/spawn_rules/` (a built-in template for the
   three vanilla dimensions is always available; the Nether defaults to `portal_type`).
-- **Six spawn methods**:
+- **Eight spawn methods**:
   | id | purpose |
   |---|---|
   | `default` | Overworld-style ring search for the nearest safe land. |
@@ -34,11 +34,12 @@ per-dimension spawn system.
 All commands are under `/betterspawn`:
 
 ```text
-/betterspawn worldspawn global [<pos> | <dimension>] [<pos>] [<angle>]
-/betterspawn worldspawn player <targets> [<pos> | <dimension>] [<pos>] [<angle>]
+/betterspawn worldspawn global [<pos>] [<angle>] [<dimension>]
+/betterspawn worldspawn player <targets> [<pos>] [<angle>] [<dimension>]
 /betterspawn worldspawn clear [<dimension>] [<targets>]
 /betterspawn worldspawn query [<dimension>] [<target>]
 /betterspawn worldspawn regenerate [<dimension>]
+/betterspawn worldspawn spawn_dimension [<dimension>]
 /betterspawn worldspawn list
 /betterspawn worldspawn reload
 
@@ -48,13 +49,16 @@ All commands are under `/betterspawn`:
 /betterspawn spawnpoint clear <targets> [command|bed|anchor|all]
 /betterspawn spawnpoint query <target>
 
-/gotodim [<dimension>] [simulate|teleport|verify] [--method <id>] [--params <json>]
+/gotodim [simulate|teleport|verify] [--method <id>] [--params <json>]
          [--seed <n>] [--repeat <n>] [--timeout <ticks>] [--verbose] [--all]
+         [<dimension>]
 ```
 
-`/gotodim` is also available as `/betterspawn gotodim`.
+`/gotodim` is also available as `/betterspawn gotodim`. The dimension is normally
+placed last; for compatibility it is also accepted as the first argument.
 Omitted arguments default to the current dimension / the player's feet position / the
-player's current yaw.
+player's current yaw. The `pos angle dimension` order is intentional for the
+`worldspawn` and `spawnpoint` setters.
 
 ## Template format
 
@@ -172,13 +176,16 @@ Requires JDK 21. The Gradle toolchain downloads it if needed.
 ```text
 src/main/java/com/proto781m/betterspawn/
     api/                 method interface, registry, context, result
+    client/              create-world screen button
     command/             worldspawn / spawnpoint / gotodim
     data/                WorldSpawnData, PlayerSpawnData, slots
     event/               command registration, respawn interception, spawn-slot mirroring
     logic/               priority resolver, dimension initializer, verify tasks
-    method/              the six spawn methods
+    method/              the eight spawn methods
+    mixin/               client-only CreateWorldScreen MoreTab injection
     resolver/            method dispatcher, safety checks, terrain scanner
     template/            JSON loading and built-in defaults
     util/                platform builder, safe-position finder, adapters
+docs/                    design notes and cave template example
 src/main/resources/data/betterspawn/spawn_rules/minecraft/   built-in templates
 ```

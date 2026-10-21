@@ -67,19 +67,19 @@ public class PlatformSpawnMethod implements SpawnMethod {
         if (!scanner.ensureChunk(center.getX(), center.getZ())) {
             return new ResolveResult(null, dimension, 0.0F, id(), false, 0L,
                     scanner.samples(), 0, ResolveResult.Status.UNSAFE,
-                    List.of("无法加载平台所在区块 [" + (center.getX() >> 4) + ", " + (center.getZ() >> 4) + "]"));
+                    List.of("Could not load platform chunk [" + (center.getX() >> 4) + ", " + (center.getZ() >> 4) + "]"));
         }
 
         BlockState state = PlatformBuilder.resolveState(materialId);
         List<String> warnings = new ArrayList<>();
-        warnings.add("平台方法：material=" + materialId + ", size=" + size);
+        warnings.add("Platform: material=" + materialId + ", size=" + size);
 
         if (ctx.simulate()) {
-            warnings.add("simulate 模式：未实际搭建平台");
+            warnings.add("simulate mode: platform was not built");
         } else {
             PlatformBuilder.build(level, center, size, state);
             if (!SafePosFinder.isSafeStandingPosition(level, center.above())) {
-                warnings.add("平台搭建后落脚点仍不安全，请检查该维度的高度限制");
+                warnings.add("Platform was built but the standing position is still unsafe; check the dimension height limits");
             }
         }
 

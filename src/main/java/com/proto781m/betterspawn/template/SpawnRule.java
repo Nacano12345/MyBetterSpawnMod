@@ -1,7 +1,6 @@
 package com.proto781m.betterspawn.template;
 
 import java.util.Map;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -30,14 +29,6 @@ public record SpawnRule(
     /** 将 dimension 转换为 ResourceKey<Level>，供解析器使用。 */
     public ResourceKey<Level> dimensionKey() {
         return ResourceKey.create(Registries.DIMENSION, dimension);
-    }
-
-    public Map<String, Object> parameters() {
-        return parameters;
-    }
-
-    public Map<String, Object> fallbackParameters() {
-        return fallbackParameters;
     }
 
     public int getInt(String key, int def) {

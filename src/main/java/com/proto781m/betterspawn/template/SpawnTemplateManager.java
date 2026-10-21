@@ -149,7 +149,4 @@ public final class SpawnTemplateManager {
         return List.copyOf(rules.values());
     }
 
-    public static boolean isEmpty() {
-        return rules.isEmpty();
-    }
 }
