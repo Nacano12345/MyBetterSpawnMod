@@ -43,7 +43,7 @@ public final class SpawnMethodResolver {
 
         SpawnMethod method = SpawnMethodRegistry.get(id);
         if (method == null) {
-            BetterSpawn.LOGGER.warn("未知的出生点方法 '{}'（维度 {}），尝试 fallback", id, rule.dimension());
+            BetterSpawn.LOGGER.warn("Unknown spawn method '{}' for {}; trying fallback", id, rule.dimension());
             return attemptFallback(ctx, id, depth, visited);
         }
 
@@ -73,7 +73,7 @@ public final class SpawnMethodResolver {
             return ResolveResult.empty(currentMethod, ResolveResult.Status.EMPTY);
         }
         if (SpawnMethodRegistry.get(fallbackId) == null) {
-            BetterSpawn.LOGGER.warn("未知的 fallback 方法 '{}'（维度 {}）", fallbackId, ctx.rule().dimension());
+            BetterSpawn.LOGGER.warn("Unknown fallback method '{}' for {}", fallbackId, ctx.rule().dimension());
             return ResolveResult.empty(currentMethod, ResolveResult.Status.EMPTY);
         }
 

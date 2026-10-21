@@ -81,10 +81,8 @@ public final class InitialSpawnDimensionHandler {
             TeleportHelper.teleport(player, target,
                     point.pos().getX() + 0.5, point.pos().getY(), point.pos().getZ() + 0.5,
                     point.angle(), player.getXRot());
-            player.sendSystemMessage(Component.literal(
-                    "§e[BetterSpawn] 实验性出生维度: " + dimension.location()));
-            BetterSpawn.LOGGER.info("Initial spawn dimension: teleported {} to {} at {}",
-                    player.getScoreboardName(), dimension.location(), point.pos());
+            player.sendSystemMessage(Component.translatable(
+                    "betterspawn.msg.initial_dimension", dimension.location().toString()));
         });
     }
 }

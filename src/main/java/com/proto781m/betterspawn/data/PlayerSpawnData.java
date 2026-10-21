@@ -117,9 +117,6 @@ public final class PlayerSpawnData {
         }
         root.put(KEY_DIM_SPAWNS, updated);
         saveRoot(player, root);
-        com.proto781m.betterspawn.BetterSpawn.LOGGER.info(
-                "Set personal world spawn for {} in {} at {} angle={}",
-                player.getScoreboardName(), dimension.location(), pos, angle);
     }
 
     public static void clearDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension) {

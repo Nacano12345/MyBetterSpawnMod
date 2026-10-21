@@ -69,7 +69,7 @@ public final class VerifyTaskManager {
             return;
         }
         if (player.level() != level) {
-            player.sendSystemMessage(Component.literal("§e[verify] 玩家已不在目标维度，跳过校验"));
+            player.sendSystemMessage(Component.translatable("betterspawn.msg.verify.wrong_dimension"));
             return;
         }
 
@@ -85,21 +85,25 @@ public final class VerifyTaskManager {
         boolean onGround = player.onGround() || (solidGround && atTarget);
         double distance = player.position().distanceTo(Vec3.atBottomCenterOf(expected));
 
-        StringBuilder sb = new StringBuilder("§e[verify] ");
-        sb.append(onGround ? "§a已就位" : "§c未落地");
-        sb.append(solidGround ? " §7脚下有实体方块" : " §c脚下没有实体方块");
+        net.minecraft.network.chat.MutableComponent message =
+                Component.translatable("betterspawn.msg.verify.header")
+                        .append(Component.translatable(onGround
+                                ? "betterspawn.msg.verify.on_ground"
+                                : "betterspawn.msg.verify.not_on_ground"))
+                        .append(Component.translatable(solidGround
+                                ? "betterspawn.msg.verify.solid_ground"
+                                : "betterspawn.msg.verify.no_solid_ground"));
         if (inLiquid) {
-            sb.append(" §c在液体中");
+            message.append(Component.translatable("betterspawn.msg.verify.liquid"));
         }
         if (inVoid) {
-            sb.append(" §4掉入虚空");
+            message.append(Component.translatable("betterspawn.msg.verify.void"));
         }
-        sb.append(" §7距目标 ").append(String.format("%.2f", distance)).append(" 格");
-        sb.append(" §7y=").append(String.format("%.1f", player.getY()));
+        message.append(Component.translatable("betterspawn.msg.verify.distance",
+                String.format("%.2f", distance)));
+        message.append(Component.translatable("betterspawn.msg.verify.y",
+                String.format("%.1f", player.getY())));
 
-        player.sendSystemMessage(Component.literal(sb.toString()));
-        BetterSpawn.LOGGER.info("Verify {} at {} -> y={}, onGround={}, solidGround={}, liquid={}, distance={}",
-                player.getScoreboardName(), expected, player.getY(), onGround, solidGround, inLiquid,
-                String.format("%.2f", distance));
+        player.sendSystemMessage(message);
     }
 }

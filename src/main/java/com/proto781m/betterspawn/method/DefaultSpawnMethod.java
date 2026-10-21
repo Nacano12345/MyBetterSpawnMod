@@ -147,7 +147,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
                 }
             }
         } catch (Exception ex) {
-            BetterSpawn.LOGGER.warn("原版气候采样兜底失败: {}", ex.toString());
+            BetterSpawn.LOGGER.warn("Vanilla climate fallback failed: {}", ex.toString());
         }
         return null;
     }

@@ -8,7 +8,6 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SearchTrace;
 import com.proto781m.betterspawn.api.SpawnMethodRegistry;
@@ -54,7 +53,7 @@ import net.minecraft.world.level.Level;
 public final class GotoDimCommand {
 
     private static final SimpleCommandExceptionType ERROR = new SimpleCommandExceptionType(
-            Component.literal("gotodim 参数错误"));
+            Component.translatable("betterspawn.msg.gotodim.error"));
 
     private GotoDimCommand() {
     }
@@ -133,7 +132,7 @@ public final class GotoDimCommand {
                 : ctx.getSource().getLevel().dimension();
         ServerLevel level = server.getLevel(target);
         if (level == null) {
-            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + target.location()));
+            ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.dimension_missing", target.location().toString()));
             return 0;
         }
         return runOne(ctx, level, options, true);
@@ -155,7 +154,7 @@ public final class GotoDimCommand {
                 case "--verbose" -> options.verbose = true;
                 case "--all" -> options.all = true;
                 default -> throw new SimpleCommandExceptionType(
-                        Component.literal("未知参数: " + token)).create();
+                        Component.translatable("betterspawn.msg.gotodim.unknown_option", token)).create();
             }
         }
         return options;
@@ -164,7 +163,7 @@ public final class GotoDimCommand {
     private static String value(List<String> tokens, int index, String option) throws CommandSyntaxException {
         if (index >= tokens.size()) {
             throw new SimpleCommandExceptionType(
-                    Component.literal(option + " 缺少参数值")).create();
+                    Component.translatable("betterspawn.msg.gotodim.missing_value", option)).create();
         }
         return tokens.get(index);
     }
@@ -174,7 +173,7 @@ public final class GotoDimCommand {
             return Long.parseLong(value);
         } catch (NumberFormatException ex) {
             throw new SimpleCommandExceptionType(
-                    Component.literal(option + " 需要整数: " + value)).create();
+                    Component.translatable("betterspawn.msg.gotodim.invalid_number", option, value)).create();
         }
     }
 
@@ -183,7 +182,7 @@ public final class GotoDimCommand {
             return Integer.parseInt(value);
         } catch (NumberFormatException ex) {
             throw new SimpleCommandExceptionType(
-                    Component.literal(option + " 需要整数: " + value)).create();
+                    Component.translatable("betterspawn.msg.gotodim.invalid_number", option, value)).create();
         }
     }
 
@@ -379,19 +378,19 @@ public final class GotoDimCommand {
 
         if (teleport) {
             if (!ctx.getSource().hasPermission(2)) {
-                ctx.getSource().sendFailure(Component.literal("§cteleport/verify 需要权限等级 2"));
+                ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.gotodim.no_permission"));
                 return 0;
             }
             if (!(ctx.getSource().getEntity() instanceof ServerPlayer)) {
-                ctx.getSource().sendFailure(Component.literal("§cteleport/verify 只能由玩家执行"));
+                ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.gotodim.player_only"));
                 return 0;
             }
         }
 
         SpawnRule base = SpawnTemplateManager.get(level.dimension().location()).orElse(null);
         if (base == null) {
-            ctx.getSource().sendFailure(Component.literal(
-                    "§c维度 " + level.dimension().location() + " 没有出生点模板"));
+            ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.gotodim.no_template",
+                    level.dimension().location().toString()));
             return 0;
         }
         SpawnRule rule = applyOverrides(base, options);
@@ -440,15 +439,15 @@ public final class GotoDimCommand {
         if (total > 1) {
             long avgTime = totalTime / total;
             long avgSamples = totalSamples / total;
-            ctx.getSource().sendSystemMessage(Component.literal(
-                    "§e=== " + level.dimension().location() + " 重复测试 " + total + " 次 ==="));
-            ctx.getSource().sendSystemMessage(Component.literal(
-                    "  成功率: " + String.format("%.1f%%", successCount * 100.0 / total)
-                            + "  fallback率: " + String.format("%.1f%%", fallbackCount * 100.0 / total)));
-            ctx.getSource().sendSystemMessage(Component.literal(
-                    "  耗时 min/avg/max: " + minTime + " / " + avgTime + " / " + maxTime + " ms"));
-            ctx.getSource().sendSystemMessage(Component.literal(
-                    "  平均采样: " + avgSamples + "  最大半径: " + maxRadius));
+            ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.repeat_header",
+                    level.dimension().location().toString(), String.valueOf(total)));
+            ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.success_rate",
+                    String.format("%.1f%%", successCount * 100.0 / total),
+                    String.format("%.1f%%", fallbackCount * 100.0 / total)));
+            ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.time_stats",
+                    String.valueOf(minTime), String.valueOf(avgTime), String.valueOf(maxTime)));
+            ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.sample_stats",
+                    String.valueOf(avgSamples), String.valueOf(maxRadius)));
         }
 
         return successCount > 0 ? 1 : 0;
@@ -463,14 +462,14 @@ public final class GotoDimCommand {
                 JsonElement parsed = JsonParser.parseString(options.params);
                 if (!parsed.isJsonObject()) {
                     throw new SimpleCommandExceptionType(
-                            Component.literal("--params 必须是 JSON 对象")).create();
+                            Component.translatable("betterspawn.msg.gotodim.params_object")).create();
                 }
                 params.putAll(SpawnTemplateLoader.parseParams(parsed.getAsJsonObject()));
             } catch (CommandSyntaxException ex) {
                 throw ex;
             } catch (Exception ex) {
                 throw new SimpleCommandExceptionType(
-                        Component.literal("--params JSON 解析失败: " + ex.getMessage())).create();
+                        Component.translatable("betterspawn.msg.gotodim.params_invalid", String.valueOf(ex.getMessage()))).create();
             }
         }
 
@@ -497,8 +496,8 @@ public final class GotoDimCommand {
         TeleportHelper.teleport(player, targetLevel,
                 pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
                 result.angle(), player.getXRot());
-        ctx.getSource().sendSystemMessage(Component.literal("§a已传送到 " + pos
-                + " (" + targetLevel.dimension().location() + ")"));
+        ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.teleported",
+                pos.toString(), targetLevel.dimension().location().toString()));
 
         if (verify) {
             // 跨维度传送后客户端需要时间加载区块，等 3 秒再校验
@@ -516,38 +515,49 @@ public final class GotoDimCommand {
             default -> "§c";
         };
 
-        ctx.getSource().sendSystemMessage(Component.literal(
-                "§e[BetterSpawn] 维度 " + level.dimension().location() + " 解析结果"));
-        ctx.getSource().sendSystemMessage(Component.literal(
-                "  方法: " + result.usedMethod() + (result.fallbackUsed() ? " (fallback)" : "")));
-        if (result.pos() != null) {
-            ctx.getSource().sendSystemMessage(Component.literal(
-                    "  坐标: " + result.pos() + "  §7y=" + result.pos().getY()));
-        } else {
-            ctx.getSource().sendSystemMessage(Component.literal("  坐标: 无"));
+        ctx.getSource().sendSystemMessage(Component.translatable(
+                "betterspawn.msg.gotodim.result.header", level.dimension().location().toString()));
+
+        net.minecraft.network.chat.MutableComponent methodName =
+                Component.literal(result.usedMethod());
+        if (result.fallbackUsed()) {
+            methodName.append(Component.translatable("betterspawn.msg.gotodim.result.fallback_suffix"));
         }
-        ctx.getSource().sendSystemMessage(Component.literal(
-                "  耗时: " + result.elapsedMillis() + " ms"));
-        ctx.getSource().sendSystemMessage(Component.literal(
-                "  采样: " + result.samples() + "  最大半径: " + result.maxRadiusReached()));
-        ctx.getSource().sendSystemMessage(Component.literal(
-                "  状态: " + color + result.status()));
+        ctx.getSource().sendSystemMessage(Component.translatable(
+                "betterspawn.msg.gotodim.result.method", methodName));
+
+        if (result.pos() != null) {
+            ctx.getSource().sendSystemMessage(Component.translatable(
+                    "betterspawn.msg.gotodim.result.pos",
+                    result.pos().toString(), String.valueOf(result.pos().getY())));
+        } else {
+            ctx.getSource().sendSystemMessage(Component.translatable(
+                    "betterspawn.msg.gotodim.result.no_pos"));
+        }
+        ctx.getSource().sendSystemMessage(Component.translatable(
+                "betterspawn.msg.gotodim.result.elapsed", String.valueOf(result.elapsedMillis())));
+        ctx.getSource().sendSystemMessage(Component.translatable(
+                "betterspawn.msg.gotodim.result.samples",
+                String.valueOf(result.samples()), String.valueOf(result.maxRadiusReached())));
+        ctx.getSource().sendSystemMessage(Component.translatable(
+                "betterspawn.msg.gotodim.result.status",
+                color, Component.translatable("betterspawn.status."
+                        + result.status().name().toLowerCase(java.util.Locale.ROOT))));
 
         for (String warning : result.warnings()) {
-            ctx.getSource().sendSystemMessage(Component.literal("  ⚠ " + warning));
+            ctx.getSource().sendSystemMessage(Component.translatable(
+                    "betterspawn.msg.gotodim.result.warning", warning));
         }
         if (verbose && trace != null && !trace.rings().isEmpty()) {
-            ctx.getSource().sendSystemMessage(Component.literal("  详细轨迹:"));
+            ctx.getSource().sendSystemMessage(Component.translatable(
+                    "betterspawn.msg.gotodim.result.trace"));
             for (SearchTrace.RingTrace ring : trace.rings()) {
-                ctx.getSource().sendSystemMessage(Component.literal(
-                        "    半径 " + ring.radius() + ": 候选 " + ring.candidates()
-                                + ", 接受 " + ring.accepted()));
+                ctx.getSource().sendSystemMessage(Component.translatable(
+                        "betterspawn.msg.gotodim.result.ring",
+                        String.valueOf(ring.radius()), String.valueOf(ring.candidates()),
+                        String.valueOf(ring.accepted())));
             }
         }
-
-        BetterSpawn.LOGGER.info("gotodim {} -> method={}, status={}, pos={}, elapsed={}ms, samples={}",
-                level.dimension().location(), result.usedMethod(), result.status(),
-                result.pos(), result.elapsedMillis(), result.samples());
     }
 
     private static int clamp(int value, int min, int max) {

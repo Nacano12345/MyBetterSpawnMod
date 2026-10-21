@@ -18,6 +18,7 @@ import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -146,8 +147,9 @@ public final class SpawnPointCommand {
             changed++;
         }
 
-        String message = "§a已设置 " + changed + " 个玩家的指令出生点";
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.spawnpoint.set",
+                String.valueOf(changed));
+        ctx.getSource().sendSuccess(() -> message, true);
         return changed > 0 ? 1 : 0;
     }
 
@@ -178,16 +180,22 @@ public final class SpawnPointCommand {
         }
 
         if (changed == 0) {
-            String hint = type == SpawnSlotType.BED
-                    ? "目标位置不是有效床方块"
-                    : "目标位置不是有效重生锚";
-            ctx.getSource().sendFailure(Component.literal("§c没有设置任何 " + type + " 槽：" + hint));
+            Component hint = Component.translatable(type == SpawnSlotType.BED
+                    ? "betterspawn.msg.spawnpoint.invalid.bed"
+                    : "betterspawn.msg.spawnpoint.invalid.anchor");
+            ctx.getSource().sendFailure(Component.translatable(
+                    "betterspawn.msg.spawnpoint.slot.invalid", String.valueOf(type), hint));
             return 0;
         }
 
-        String message = "§a已设置 " + changed + " 个玩家的 " + type + " 槽"
-                + (invalid > 0 ? "（跳过 " + invalid + " 个无效目标）" : "");
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.spawnpoint.slot.set",
+                String.valueOf(changed), String.valueOf(type));
+        if (invalid > 0) {
+            message = message.copy().append(Component.translatable(
+                    "betterspawn.msg.spawnpoint.slot.skipped", String.valueOf(invalid)));
+        }
+        Component finalMessage = message;
+        ctx.getSource().sendSuccess(() -> finalMessage, true);
         return 1;
     }
 
@@ -218,36 +226,46 @@ public final class SpawnPointCommand {
                 }
             }
         }
-        String message = "§a已清除 " + targets.size() + " 个玩家的 " + slotName + " 槽";
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.spawnpoint.clear",
+                String.valueOf(targets.size()), slotName);
+        ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
 
     private static int execQuery(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
-        StringBuilder sb = new StringBuilder("§e=== ").append(target.getScoreboardName()).append(" 的重生点 ===\n");
+        MutableComponent message = Component.translatable("betterspawn.msg.spawnpoint.query.header",
+                target.getScoreboardName()).append(Component.literal("\n"));
 
         var dimensionSpawns = PlayerSpawnData.getAllDimensionSpawns(target);
         if (dimensionSpawns.isEmpty()) {
-            sb.append("  个人世界出生点: 无\n");
+            message.append(Component.translatable("betterspawn.msg.spawnpoint.query.dim_none"))
+                    .append(Component.literal("\n"));
         } else {
-            dimensionSpawns.forEach((dimension, point) -> sb.append("  个人世界出生点 [")
-                    .append(dimension.location()).append("]: ").append(point.pos())
-                    .append(" angle=").append(point.angle()).append("\n"));
+            dimensionSpawns.forEach((dimension, point) -> message
+                    .append(Component.translatable("betterspawn.msg.spawnpoint.query.dim",
+                            dimension.location().toString(), point.pos().toString(),
+                            String.valueOf(point.angle())))
+                    .append(Component.literal("\n")));
         }
 
         var slots = PlayerSpawnData.getSlots(target);
         for (SpawnSlotType type : SpawnSlotType.values()) {
             SpawnSlot slot = slots.get(type);
             if (slot == null) {
-                sb.append("  ").append(type).append(" 槽: 无\n");
+                message.append(Component.translatable("betterspawn.msg.spawnpoint.query.slot_none",
+                                String.valueOf(type)))
+                        .append(Component.literal("\n"));
             } else {
-                sb.append("  ").append(type).append(" 槽 [").append(slot.dimension().location())
-                        .append("]: ").append(slot.pos()).append(" angle=").append(slot.angle())
-                        .append(" valid=").append(slot.valid()).append("\n");
+                message.append(Component.translatable("betterspawn.msg.spawnpoint.query.slot",
+                                String.valueOf(type), slot.dimension().location().toString(),
+                                slot.pos().toString(), String.valueOf(slot.angle()),
+                                String.valueOf(slot.valid())))
+                        .append(Component.literal("\n"));
             }
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
+        Component finalMessage = message;
+        ctx.getSource().sendSuccess(() -> finalMessage, false);
         return 1;
     }
 }

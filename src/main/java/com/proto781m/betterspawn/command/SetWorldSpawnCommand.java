@@ -121,14 +121,13 @@ public final class SetWorldSpawnCommand {
         root.then(Commands.literal("list").executes(ctx -> {
             var templates = SpawnTemplateManager.all();
             if (templates.isEmpty()) {
-                ctx.getSource().sendFailure(Component.literal("§c没有加载任何出生点模板"));
+                ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.templates.empty"));
                 return 0;
             }
-            ctx.getSource().sendSystemMessage(Component.literal("§e=== BetterSpawn 已加载模板 ==="));
+            ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.templates.header"));
             for (var rule : templates) {
-                ctx.getSource().sendSystemMessage(Component.literal(
-                        "  §b" + rule.dimension() + "§r: method=" + rule.method()
-                                + ", fallback=" + rule.fallback()));
+                ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.templates.entry",
+                        rule.dimension().toString(), rule.method(), String.valueOf(rule.fallback())));
             }
             return 1;
         }));
@@ -137,7 +136,7 @@ public final class SetWorldSpawnCommand {
         root.then(Commands.literal("reload").executes(ctx -> {
             MinecraftServer server = ctx.getSource().getServer();
             server.reloadResources(server.getPackRepository().getSelectedIds());
-            ctx.getSource().sendSuccess(() -> Component.literal("§aBetterSpawn: 已触发数据包重载"), true);
+            ctx.getSource().sendSuccess(() -> Component.translatable("betterspawn.msg.reloaded"), true);
             return 1;
         }));
 
@@ -201,13 +200,15 @@ public final class SetWorldSpawnCommand {
         MinecraftServer server = ctx.getSource().getServer();
         ServerLevel level = server.getLevel(dimension);
         if (level == null) {
-            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + dimension.location()));
+            ctx.getSource().sendFailure(Component.translatable(
+                    "betterspawn.msg.dimension_missing", dimension.location().toString()));
             return 0;
         }
 
         WorldSpawnData.get(server).set(dimension, pos, angle, level);
-        String message = "§a已设置 " + dimension.location() + " 全局默认出生点: " + pos + " angle=" + angle;
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.worldspawn.set",
+                dimension.location().toString(), pos.toString(), String.valueOf(angle));
+        ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
 
@@ -227,16 +228,20 @@ public final class SetWorldSpawnCommand {
             changed++;
         }
 
-        String message = "§a已设置 " + changed + " 个玩家在 "
-                + (dimension != null ? dimension.location() : "各自维度") + " 的个人世界出生点";
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component dimensionName = dimension != null
+                ? Component.literal(dimension.location().toString())
+                : Component.translatable("betterspawn.msg.current_dimension");
+        Component message = Component.translatable("betterspawn.msg.worldspawn.player.set",
+                String.valueOf(changed), dimensionName);
+        ctx.getSource().sendSuccess(() -> message, true);
         return changed > 0 ? 1 : 0;
     }
 
     private static int execClearGlobal(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension) {
         WorldSpawnData.get(ctx.getSource().getServer()).clear(dimension);
-        String message = "§a已清除 " + dimension.location() + " 的全局默认出生点";
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.worldspawn.global.clear",
+                dimension.location().toString());
+        ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
 
@@ -245,8 +250,9 @@ public final class SetWorldSpawnCommand {
         for (ServerPlayer target : targets) {
             PlayerSpawnData.clearDimensionSpawn(target, dimension);
         }
-        String message = "§a已清除 " + targets.size() + " 个玩家在 " + dimension.location() + " 的个人世界出生点";
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.worldspawn.player.clear",
+                String.valueOf(targets.size()), dimension.location().toString());
+        ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
 
@@ -265,14 +271,16 @@ public final class SetWorldSpawnCommand {
             pos = entry.get().pos();
             angle = entry.get().angle();
         } else {
-            ctx.getSource().sendFailure(Component.literal("§c" + dimension.location() + " 无全局默认出生点"));
+            ctx.getSource().sendFailure(Component.translatable(
+                    "betterspawn.msg.worldspawn.global.none", dimension.location().toString()));
             return 0;
         }
 
         BlockPos finalPos = pos;
         float finalAngle = angle;
-        String message = "§e" + dimension.location() + " 全局默认出生点: " + finalPos + " angle=" + finalAngle;
-        ctx.getSource().sendSuccess(() -> Component.literal(message), false);
+        Component message = Component.translatable("betterspawn.msg.worldspawn.global.query",
+                dimension.location().toString(), finalPos.toString(), String.valueOf(finalAngle));
+        ctx.getSource().sendSuccess(() -> message, false);
         return 1;
     }
 
@@ -280,28 +288,33 @@ public final class SetWorldSpawnCommand {
                                        ServerPlayer target) {
         var entry = PlayerSpawnData.getDimensionSpawn(target, dimension);
         if (entry.isEmpty()) {
-            String message = "§c" + target.getScoreboardName() + " 在 " + dimension.location() + " 无个人世界出生点";
-            ctx.getSource().sendSuccess(() -> Component.literal(message), false);
+            Component message = Component.translatable("betterspawn.msg.worldspawn.player.none",
+                    target.getScoreboardName(), dimension.location().toString());
+            ctx.getSource().sendSuccess(() -> message, false);
             return 0;
         }
         var point = entry.get();
-        String message = "§e" + target.getScoreboardName() + " 在 " + dimension.location()
-                + " 的个人世界出生点: " + point.pos() + " angle=" + point.angle();
-        ctx.getSource().sendSuccess(() -> Component.literal(message), false);
+        Component message = Component.translatable("betterspawn.msg.worldspawn.player.query",
+                target.getScoreboardName(), dimension.location().toString(),
+                point.pos().toString(), String.valueOf(point.angle()));
+        ctx.getSource().sendSuccess(() -> message, false);
         return 1;
     }
 
     private static int execRegenerate(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension) {
         boolean ok = DimensionSpawnInitializer.regenerate(ctx.getSource().getServer(), dimension);
         if (!ok) {
-            ctx.getSource().sendFailure(Component.literal("§c重新解析失败: " + dimension.location()));
+            ctx.getSource().sendFailure(Component.translatable(
+                    "betterspawn.msg.worldspawn.regenerate.fail", dimension.location().toString()));
             return 0;
         }
         var point = WorldSpawnData.get(ctx.getSource().getServer()).get(dimension);
-        String message = point.map(p -> "§a已重新解析 " + dimension.location() + " 的默认出生点: "
-                        + p.pos() + " angle=" + p.angle())
-                .orElse("§a已重新解析 " + dimension.location());
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = point.map(p -> (Component) Component.translatable(
+                        "betterspawn.msg.worldspawn.regenerate.ok",
+                        dimension.location().toString(), p.pos().toString(), String.valueOf(p.angle())))
+                .orElseGet(() -> Component.translatable("betterspawn.msg.worldspawn.regenerate.ok_no_pos",
+                        dimension.location().toString()));
+        ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
 
@@ -309,20 +322,22 @@ public final class SetWorldSpawnCommand {
                                              ResourceKey<Level> dimension) {
         MinecraftServer server = ctx.getSource().getServer();
         if (server.getLevel(dimension) == null) {
-            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + dimension.location()));
+            ctx.getSource().sendFailure(Component.translatable(
+                    "betterspawn.msg.dimension_missing", dimension.location().toString()));
             return 0;
         }
         WorldSpawnData.get(server).setSpawnDimension(dimension);
-        String message = "§a实验性出生维度已设为 " + dimension.location()
-                + "（只影响之后首次进入世界的新玩家）";
-        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        Component message = Component.translatable("betterspawn.msg.spawn_dimension.set",
+                dimension.location().toString());
+        ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
 
     private static int execQuerySpawnDimension(CommandContext<CommandSourceStack> ctx) {
         ResourceKey<Level> dimension = WorldSpawnData.get(ctx.getSource().getServer()).spawnDimension();
-        String message = "§e实验性出生维度: " + dimension.location();
-        ctx.getSource().sendSuccess(() -> Component.literal(message), false);
+        Component message = Component.translatable("betterspawn.msg.spawn_dimension.query",
+                dimension.location().toString());
+        ctx.getSource().sendSuccess(() -> message, false);
         return 1;
     }
 }

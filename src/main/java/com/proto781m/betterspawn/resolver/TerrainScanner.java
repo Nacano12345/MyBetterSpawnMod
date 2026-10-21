@@ -181,7 +181,7 @@ public final class TerrainScanner {
             level.getChunk(chunkX, chunkZ, ChunkStatus.FULL, true);
             return level.getChunkSource().hasChunk(chunkX, chunkZ);
         } catch (Exception ex) {
-            BetterSpawn.LOGGER.warn("加载区块 [{}, {}] 失败：{}", chunkX, chunkZ, ex.toString());
+            BetterSpawn.LOGGER.warn("Failed to load chunk [{}, {}]: {}", chunkX, chunkZ, ex.toString());
             return false;
         }
     }

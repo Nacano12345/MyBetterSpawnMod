@@ -54,7 +54,7 @@ public final class DimensionSpawnInitializer {
         MinecraftServer server = level.getServer();
         ResolveResult result = SpawnPointResolver.resolveFromTemplate(server, Level.OVERWORLD, false);
         if (result.pos() == null) {
-            BetterSpawn.LOGGER.warn("新世界出生点解析失败（status={}），交还原版处理：{}",
+            BetterSpawn.LOGGER.warn("Initial overworld spawn resolution failed (status={}); deferring to vanilla: {}",
                     result.status(), result.warnings());
             return;
         }
