@@ -45,7 +45,7 @@ public final class BetterSpawnConfig {
                 .defineInRange("searchTimeoutTicks", 200, 1, 2000);
         MAX_CHUNK_LOADS = b
                 .comment("单次解析最多同步加载/生成多少个区块。数值过大会导致首次进服卡顿或存档 IO 压力。")
-                .defineInRange("maxChunkLoads", 128, 1, 8192);
+                .defineInRange("maxChunkLoads", 64, 1, 8192);
         b.pop();
 
         b.push("debug");

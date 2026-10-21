@@ -46,7 +46,7 @@ public final class SpawnTemplateManager {
                 Map.of(
                         "center_x", 0,
                         "center_z", 0,
-                        "max_radius", 512,
+                        "max_radius", 256,
                         "ring_step", 64
                 ),
                 "platform",

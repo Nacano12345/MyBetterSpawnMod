@@ -45,7 +45,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
 
         int centerX = ctx.rule().getInt("center_x", 0);
         int centerZ = ctx.rule().getInt("center_z", 0);
-        int maxRadius = clamp(ctx.rule().getInt("max_radius", 512), 0, 8192);
+        int maxRadius = clamp(ctx.rule().getInt("max_radius", 256), 0, 8192);
         int ringStep = clamp(ctx.rule().getInt("ring_step", 64), 16, 1024);
         int maxChunkLoads = clamp(
                 ctx.rule().getInt("max_chunk_loads", BetterSpawnConfig.MAX_CHUNK_LOADS.get()),
@@ -127,7 +127,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
                     level.getChunkSource().randomState().sampler().findSpawnPosition());
 
             // 原版本身会在 11x11 区块范围内找安全落点；这里做同样的事
-            for (int radius = 0; radius <= 5; radius++) {
+            for (int radius = 0; radius <= 2; radius++) {
                 for (int dx = -radius; dx <= radius; dx++) {
                     for (int dz = -radius; dz <= radius; dz++) {
                         if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
