@@ -49,6 +49,7 @@ public class FloatingIslandSpawnMethod implements SpawnMethod {
         int maxChunkLoads = clamp(
                 ctx.rule().getInt("max_chunk_loads", BetterSpawnConfig.MAX_CHUNK_LOADS.get()),
                 1, 8192);
+        int maxSurfaceDepth = clamp(ctx.rule().getInt("max_surface_depth", 32), 1, 128);
 
         TerrainScanner scanner = new TerrainScanner(level, ctx.deadlineMillis(), maxChunkLoads);
         float angle = rng.nextFloat() * 360.0F;
@@ -66,7 +67,7 @@ public class FloatingIslandSpawnMethod implements SpawnMethod {
                     continue;
                 }
 
-                BlockPos feet = scanner.findSurface(x, z, TerrainScanner.LiquidPolicy.REJECT_LIQUID);
+                BlockPos feet = scanner.findSurface(x, z, TerrainScanner.LiquidPolicy.REJECT_LIQUID, maxSurfaceDepth);
                 if (feet != null) {
                     accepted++;
                     ctx.trace().ring(radius, count, accepted);

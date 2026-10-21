@@ -49,12 +49,16 @@ public final class TerrainScanner {
         this.maxChunkLoads = Math.max(1, maxChunkLoads);
     }
 
-    /**
-     * 在 (x, z) 列寻找一个安全站立点。
-     *
-     * @return 脚部坐标；找不到、超时、预算耗尽或区块加载失败时返回 {@code null}
-     */
+    /** 在 (x, z) 列寻找一个安全站立点（扫描到世界底部）。 */
     public BlockPos findSurface(int x, int z, LiquidPolicy policy) {
+        return findSurface(x, z, policy, Integer.MAX_VALUE);
+    }
+
+    /**
+     * 在 (x, z) 列寻找一个安全站立点，最多从高度图顶部向下扫描 {@code maxDepth} 格。
+     * 用于“地表”方法，避免钻进玩家挖出的地下空间。
+     */
+    public BlockPos findSurface(int x, int z, LiquidPolicy policy, int maxDepth) {
         if (System.currentTimeMillis() > deadlineMillis) {
             timedOut = true;
             return null;
@@ -72,7 +76,14 @@ public final class TerrainScanner {
         }
 
         int maxY = Math.min(topY, level.getMaxBuildHeight() - 2);
-        for (int y = maxY; y > minY; y--) {
+        int lowest;
+        if (maxDepth <= 0 || maxDepth >= maxY - minY) {
+            lowest = minY;
+        } else {
+            lowest = maxY - maxDepth + 1;
+        }
+
+        for (int y = maxY; y >= lowest; y--) {
             BlockPos feet = new BlockPos(x, y, z);
             BlockPos groundPos = feet.below();
             BlockState ground = level.getBlockState(groundPos);

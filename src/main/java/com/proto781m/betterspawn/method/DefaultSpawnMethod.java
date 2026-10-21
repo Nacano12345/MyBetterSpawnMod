@@ -50,13 +50,15 @@ public class DefaultSpawnMethod implements SpawnMethod {
         int maxChunkLoads = clamp(
                 ctx.rule().getInt("max_chunk_loads", BetterSpawnConfig.MAX_CHUNK_LOADS.get()),
                 1, 4096);
+        int maxSurfaceDepth = clamp(ctx.rule().getInt("max_surface_depth", 16), 1, 64);
+        int minSurfaceY = ctx.rule().getInt("min_surface_y", level.getSeaLevel() - 16);
 
         TerrainScanner scanner = new TerrainScanner(level, ctx.deadlineMillis(), maxChunkLoads);
         float angle = rng.nextFloat() * 360.0F;
         int radiusReached = 0;
 
         // 1. 中心点优先
-        BlockPos center = scanner.findSurface(centerX, centerZ, TerrainScanner.LiquidPolicy.REJECT_LIQUID);
+        BlockPos center = findSurface(scanner, centerX, centerZ, maxSurfaceDepth, minSurfaceY);
         if (center != null) {
             ctx.trace().ring(0, 1, 1);
             return ok(level, dimension, center, angle, scanner, 0);
@@ -76,7 +78,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
                     continue;
                 }
 
-                BlockPos feet = scanner.findSurface(x, z, TerrainScanner.LiquidPolicy.REJECT_LIQUID);
+                BlockPos feet = findSurface(scanner, x, z, maxSurfaceDepth, minSurfaceY);
                 if (feet != null) {
                     accepted++;
                     ctx.trace().ring(radius, count, accepted);
@@ -98,7 +100,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
         // 3. 原版气候采样兜底：海里/大范围无陆地时，用原版 findSpawnPosition 选气候合适的区块
         if (ctx.rule().getBool("vanilla_fallback", true)
                 && System.currentTimeMillis() < ctx.deadlineMillis()) {
-            BlockPos vanilla = findVanillaSpawn(level, ctx);
+            BlockPos vanilla = findVanillaSpawn(level, ctx, minSurfaceY);
             if (vanilla != null) {
                 return new ResolveResult(vanilla, dimension, angle, id(), false, 0L,
                         scanner.samples(), radiusReached, ResolveResult.Status.OK,
@@ -112,7 +114,13 @@ public class DefaultSpawnMethod implements SpawnMethod {
                         : List.of("在半径 " + maxRadius + " 内未找到安全点，原版气候采样兜底也未找到"));
     }
 
-    private static BlockPos findVanillaSpawn(ServerLevel level, SpawnContext ctx) {
+    private static BlockPos findSurface(TerrainScanner scanner, int x, int z,
+                                       int maxDepth, int minSurfaceY) {
+        BlockPos feet = scanner.findSurface(x, z, TerrainScanner.LiquidPolicy.REJECT_LIQUID, maxDepth);
+        return feet != null && feet.getY() >= minSurfaceY ? feet : null;
+    }
+
+    private static BlockPos findVanillaSpawn(ServerLevel level, SpawnContext ctx, int minSurfaceY) {
         try {
             // 原版出生点气候采样：不生成区块，只选一个气候合适的候选区块
             ChunkPos origin = new ChunkPos(
@@ -131,7 +139,8 @@ public class DefaultSpawnMethod implements SpawnMethod {
 
                         BlockPos pos = PlayerRespawnLogic.getSpawnPosInChunk(level,
                                 new ChunkPos(origin.x + dx, origin.z + dz));
-                        if (pos != null && SpawnSafetyValidator.isSafe(level, pos)) {
+                        if (pos != null && pos.getY() >= minSurfaceY
+                                && SpawnSafetyValidator.isSafe(level, pos)) {
                             return pos;
                         }
                     }
