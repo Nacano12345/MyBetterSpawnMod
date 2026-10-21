@@ -18,13 +18,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 传送门友好方法（地狱推荐）：寻找一个能放下传送门内部空间的安全位置。
+ * 传送门选址方法（地狱推荐）：寻找一个能放下传送门内部空间的安全位置。
+ *
+ * <p>本方法只负责“选址”，不会实际放置黑曜石或点亮传送门。
  *
  * <p>判定一个位置“可建传送门”需要：
  * <ul>
- *   <li>脚下是实体、非流体方块；</li>
+ *   <li>第一列（玩家实际站立列）脚下是实体、非流体方块；</li>
  *   <li>传送门内部（默认 2 宽 × 3 高）全部是空气/可替换方块，且没有液体；</li>
- *   <li>相邻的几列地面高度一致（保证底部框架能平放）；</li>
  *   <li>玩家自身脚部/头部安全。</li>
  * </ul>
  *
@@ -46,14 +47,14 @@ import net.minecraft.world.level.block.state.BlockState;
  *   <li>{@code max_chunk_loads}：本次最多加载多少个区块</li>
  * </ul>
  */
-public class FlexPlatformSpawnMethod implements SpawnMethod {
+public class PortalTypeSpawnMethod implements SpawnMethod {
 
     private record Site(BlockPos feet, boolean alongX) {
     }
 
     @Override
     public String id() {
-        return "flex_platform";
+        return "portal_type";
     }
 
     @Override
@@ -258,7 +259,7 @@ public class FlexPlatformSpawnMethod implements SpawnMethod {
 
     private static ResolveResult failed(ResourceKey<Level> dimension, int samples, int radius,
                                         ResolveResult.Status status, List<String> warnings) {
-        return new ResolveResult(null, dimension, 0.0F, "flex_platform", false, 0L,
+        return new ResolveResult(null, dimension, 0.0F, "portal_type", false, 0L,
                 samples, radius, status, warnings);
     }
 

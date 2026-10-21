@@ -3,9 +3,10 @@ package com.proto781m.betterspawn;
 import com.mojang.logging.LogUtils;
 import com.proto781m.betterspawn.api.SpawnMethodRegistry;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
+import com.proto781m.betterspawn.method.CaveSpawnMethod;
 import com.proto781m.betterspawn.method.DefaultSpawnMethod;
 import com.proto781m.betterspawn.method.FixedSpawnMethod;
-import com.proto781m.betterspawn.method.FlexPlatformSpawnMethod;
+import com.proto781m.betterspawn.method.PortalTypeSpawnMethod;
 import com.proto781m.betterspawn.method.FloatingIslandSpawnMethod;
 import com.proto781m.betterspawn.method.PlatformSpawnMethod;
 import com.proto781m.betterspawn.method.TopSpawnMethod;
@@ -48,9 +49,10 @@ public class BetterSpawn {
 
     private void registerMethods() {
         SpawnMethodRegistry.register(new DefaultSpawnMethod());
+        SpawnMethodRegistry.register(new CaveSpawnMethod());
         SpawnMethodRegistry.register(new TopSpawnMethod());
         SpawnMethodRegistry.register(new FixedSpawnMethod());
-        SpawnMethodRegistry.register(new FlexPlatformSpawnMethod());
+        SpawnMethodRegistry.register(new PortalTypeSpawnMethod());
         SpawnMethodRegistry.register(new FloatingIslandSpawnMethod());
         SpawnMethodRegistry.register(new WaterWorldSpawnMethod());
         SpawnMethodRegistry.register(PlatformSpawnMethod.INSTANCE);

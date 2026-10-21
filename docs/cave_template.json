@@ -1,0 +1,24 @@
+{
+  "dimension": "your:no_sky_dimension",
+  "method": "cave",
+  "parameters": {
+    "center_x": 0,
+    "center_z": 0,
+    "min_y": 32,
+    "max_y": 120,
+    "search_radius": 128,
+    "ring_step": 32,
+    "min_air_height": 2,
+    "roof_scan": 8,
+    "avoid_lava": true,
+    "max_chunk_loads": 64
+  },
+  "fallback": "platform",
+  "fallback_parameters": {
+    "x": 0,
+    "y": 64,
+    "z": 0,
+    "size": 5,
+    "material": "minecraft:netherrack"
+  }
+}

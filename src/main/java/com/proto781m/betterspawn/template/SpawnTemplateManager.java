@@ -57,16 +57,16 @@ public final class SpawnTemplateManager {
                 )
         ));
 
-        // 地狱：flex_platform 方法（寻找可建传送门的位置，失败则生成平台）
+        // 地狱：portal_type 方法（寻找可建传送门的位置，失败则生成平台）
         defaults.put(ResourceLocation.parse("minecraft:the_nether"), new SpawnRule(
                 ResourceLocation.parse("minecraft:the_nether"),
-                "flex_platform",
+                "portal_type",
                 Map.ofEntries(
                         Map.entry("center_x", 0),
                         Map.entry("center_z", 0),
                         Map.entry("min_y", 32),
                         Map.entry("max_y", 127),
-                        Map.entry("search_radius", 256),
+                        Map.entry("search_radius", 128),
                         Map.entry("ring_step", 32),
                         Map.entry("avoid_lava", true),
                         Map.entry("portal_width", 2),

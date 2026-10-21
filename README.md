@@ -6,14 +6,15 @@ per-dimension spawn system.
 ## Features
 
 - **JSON spawn templates** in `data/<namespace>/spawn_rules/` (a built-in template for the
-  three vanilla dimensions is always available; the Nether defaults to `flex_platform`).
+  three vanilla dimensions is always available; the Nether defaults to `portal_type`).
 - **Six spawn methods**:
   | id | purpose |
   |---|---|
   | `default` | Overworld-style ring search for the nearest safe land. |
   | `top` | Nether-style search downwards from the ceiling. |
   | `fixed` | Use an exact `x/y/z`, optionally with a safety check. |
-  | `flex_platform` | Finds a flat, safe Nether site that fits a 2×3 portal interior; optionally builds a cleared platform if no natural site exists. |
+  | `portal_type` | Finds a flat, safe Nether site that fits a 2×3 portal interior; optionally builds a cleared platform if no natural site exists. It only chooses the site, it does not place a portal. |
+  | `cave` | Scans for a safe underground cavity with a solid floor and a low roof; works in dimensions without sky (Nether, custom cave dimensions) and in the Overworld underground. |
   | `floating_island` | Wider ring search with a configurable minimum radius. |
   | `water_world` | Treats fluids as air and finds solid ground, preferring dry land. |
   | `platform` | Builds a platform as the final fallback. |
@@ -79,6 +80,41 @@ player's current yaw.
 
 The `dimension` field is authoritative; the file path is only used for organization.
 Rules from datapacks override the built-in defaults.
+
+### Cave / no-sky dimensions
+
+`cave` scans for a safe standing point with a solid floor and a roof within
+`roof_scan` blocks. It does **not** use the sky or the surface heightmap, so it also
+works in dimensions with a ceiling (Nether) and underground.
+
+```json
+{
+  "dimension": "your:no_sky_dimension",
+  "method": "cave",
+  "parameters": {
+    "center_x": 0,
+    "center_z": 0,
+    "min_y": 32,
+    "max_y": 120,
+    "search_radius": 128,
+    "ring_step": 32,
+    "min_air_height": 2,
+    "roof_scan": 8,
+    "avoid_lava": true,
+    "max_chunk_loads": 64
+  },
+  "fallback": "platform",
+  "fallback_parameters": {
+    "x": 0, "y": 64, "z": 0,
+    "size": 5,
+    "material": "minecraft:netherrack"
+  }
+}
+```
+
+Put this in `data/<your_pack>/spawn_rules/<dimension_path>.json`, or copy
+[`docs/cave_template.json`](docs/cave_template.json). For testing a method without changing a
+template, use `/betterspawn gotodim <dimension> simulate --method cave --verbose`.
 
 ## Important implementation notes
 
