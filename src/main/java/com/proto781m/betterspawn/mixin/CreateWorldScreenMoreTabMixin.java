@@ -1,5 +1,6 @@
 package com.proto781m.betterspawn.mixin;
 
+import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.client.CreateWorldSpawnDimensionButton;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import net.minecraft.client.gui.layouts.GridLayout;
@@ -24,5 +25,6 @@ public abstract class CreateWorldScreenMoreTabMixin {
         }
         GridLayout layout = ((GridLayoutTabAccessor) (Object) this).betterspawn$getLayout();
         layout.addChild(CreateWorldSpawnDimensionButton.create(), 3, 0);
+        BetterSpawn.diag("Added spawn dimension selector button to CreateWorldScreen MoreTab");
     }
 }

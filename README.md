@@ -143,6 +143,20 @@ template, use `/betterspawn gotodim <dimension> simulate --method cave --verbose
   If the overworld `level.dat` spawn differs from the old mod data (for example after a vanilla
   `/setworldspawn`), that choice is preserved; the other dimensions are re-resolved.
 
+## Diagnostics
+
+Detailed diagnostics are available but **off by default**. Enable them in
+`run/config/betterspawn-common.toml`:
+
+```toml
+[debug]
+    enableDiagnosticLogs = true
+```
+
+When enabled, logs prefixed with `[diag]` include the respawn chain, personal-spawn
+writes, initial spawn-dimension teleports, `gotodim` results, `verify` checks, spawn-slot
+recording, and create-world screen injection. Restart the game/server after changing it.
+
 ## Build
 
 Requires JDK 21. The Gradle toolchain downloads it if needed.

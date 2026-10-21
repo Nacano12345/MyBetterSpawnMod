@@ -83,6 +83,8 @@ public final class InitialSpawnDimensionHandler {
                     point.angle(), player.getXRot());
             player.sendSystemMessage(Component.translatable(
                     "betterspawn.msg.initial_dimension", dimension.location().toString()));
+            BetterSpawn.diag("Initial spawn dimension: teleported {} to {} at {}",
+                    player.getScoreboardName(), dimension.location(), point.pos());
         });
     }
 }

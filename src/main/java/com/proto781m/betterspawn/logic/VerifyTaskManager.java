@@ -105,5 +105,8 @@ public final class VerifyTaskManager {
                 String.format("%.1f", player.getY())));
 
         player.sendSystemMessage(message);
+        BetterSpawn.diag("Verify {} at {} -> y={}, onGround={}, solidGround={}, liquid={}, distance={}",
+                player.getScoreboardName(), expected, player.getY(), onGround, solidGround, inLiquid,
+                String.format("%.2f", distance));
     }
 }

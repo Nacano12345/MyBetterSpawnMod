@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SearchTrace;
 import com.proto781m.betterspawn.api.SpawnMethodRegistry;
@@ -558,6 +559,9 @@ public final class GotoDimCommand {
                         String.valueOf(ring.accepted())));
             }
         }
+        BetterSpawn.diag("gotodim {} -> method={}, status={}, pos={}, elapsed={}ms, samples={}",
+                level.dimension().location(), result.usedMethod(), result.status(),
+                result.pos(), result.elapsedMillis(), result.samples());
     }
 
     private static int clamp(int value, int min, int max) {

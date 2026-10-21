@@ -47,6 +47,22 @@ public class BetterSpawn {
         LOGGER.info("BetterSpawn loaded (NeoForge 1.21)");
     }
 
+    /** 诊断日志是否开启（配置 debug.enableDiagnosticLogs）。 */
+    public static boolean diagnosticsEnabled() {
+        try {
+            return BetterSpawnConfig.ENABLE_DIAGNOSTIC_LOGS.get();
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    /** 仅在开启诊断日志时输出，避免日常日志刷屏。 */
+    public static void diag(String message, Object... args) {
+        if (diagnosticsEnabled()) {
+            LOGGER.info("[diag] " + message, args);
+        }
+    }
+
     private void registerMethods() {
         SpawnMethodRegistry.register(new DefaultSpawnMethod());
         SpawnMethodRegistry.register(new CaveSpawnMethod());

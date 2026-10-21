@@ -71,7 +71,7 @@ public final class PlayerSpawnSlotHandler {
         }
 
         PlayerSpawnData.setSlot(player, SpawnSlot.valid(type, dimension, pos, player.getYRot()));
-        BetterSpawn.LOGGER.debug("Recorded {} spawn slot for {} at {} in {}",
+        BetterSpawn.diag("Recorded {} spawn slot for {} at {} in {}",
                 type, player.getScoreboardName(), pos, dimension.location());
     }
 }

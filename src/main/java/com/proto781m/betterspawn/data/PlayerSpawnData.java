@@ -1,5 +1,6 @@
 package com.proto781m.betterspawn.data;
 
+import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.util.DimensionUtil;
 import java.util.HashMap;
 import java.util.Map;
@@ -117,6 +118,8 @@ public final class PlayerSpawnData {
         }
         root.put(KEY_DIM_SPAWNS, updated);
         saveRoot(player, root);
+        BetterSpawn.diag("Set personal world spawn for {} in {} at {} angle={}",
+                player.getScoreboardName(), dimension.location(), pos, angle);
     }
 
     public static void clearDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension) {

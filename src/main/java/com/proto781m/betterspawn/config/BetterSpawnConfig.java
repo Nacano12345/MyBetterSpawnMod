@@ -20,6 +20,7 @@ public final class BetterSpawnConfig {
     public static final ModConfigSpec.IntValue MAX_CHUNK_LOADS;
     public static final ModConfigSpec.BooleanValue ENABLE_GOTODIM;
     public static final ModConfigSpec.BooleanValue ENABLE_SPAWN_DIMENSION_SELECTOR;
+    public static final ModConfigSpec.BooleanValue ENABLE_DIAGNOSTIC_LOGS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -52,6 +53,9 @@ public final class BetterSpawnConfig {
         ENABLE_GOTODIM = b
                 .comment("是否启用 /gotodim 与 /betterspawn gotodim 测试指令。")
                 .define("enableGotoDim", true);
+        ENABLE_DIAGNOSTIC_LOGS = b
+                .comment("输出详细诊断日志：重生选择链、个人出生点写入、命令解析、verify 结果等。默认关闭。")
+                .define("enableDiagnosticLogs", false);
         b.pop();
 
         b.push("experimental");
