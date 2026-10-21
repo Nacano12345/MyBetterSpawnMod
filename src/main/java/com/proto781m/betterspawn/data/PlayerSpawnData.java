@@ -22,6 +22,7 @@ public final class PlayerSpawnData {
 
     public static final String ROOT = "BetterSpawn";
     public static final String KEY_DIM_SPAWNS = "dimensionSpawns";
+    private static final String KEY_INITIAL_DIMENSION = "initialDimensionApplied";
 
     private PlayerSpawnData() {
     }
@@ -192,5 +193,19 @@ public final class PlayerSpawnData {
             }
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------
+    // 实验性：首次进入世界时应用“出生维度”
+    // ------------------------------------------------------------------
+
+    public static boolean hasInitialDimensionApplied(ServerPlayer player) {
+        return root(player).getBoolean(KEY_INITIAL_DIMENSION);
+    }
+
+    public static void setInitialDimensionApplied(ServerPlayer player) {
+        CompoundTag root = root(player);
+        root.putBoolean(KEY_INITIAL_DIMENSION, true);
+        saveRoot(player, root);
     }
 }

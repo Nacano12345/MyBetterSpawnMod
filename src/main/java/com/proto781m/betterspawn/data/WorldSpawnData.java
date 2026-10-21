@@ -40,6 +40,7 @@ public class WorldSpawnData extends SavedData {
 
     private final Map<ResourceKey<Level>, SpawnPoint> spawns = new HashMap<>();
     private int version = CURRENT_VERSION;
+    private ResourceKey<Level> spawnDimension = Level.OVERWORLD;
 
     public static WorldSpawnData get(MinecraftServer server) {
         return server.overworld()
@@ -50,6 +51,13 @@ public class WorldSpawnData extends SavedData {
     public static WorldSpawnData load(CompoundTag tag, HolderLookup.Provider registries) {
         WorldSpawnData data = new WorldSpawnData();
         data.version = tag.contains("version") ? tag.getInt("version") : 0;
+        if (tag.contains("spawn_dimension")) {
+            try {
+                data.spawnDimension = DimensionUtil.parse(tag.getString("spawn_dimension"));
+            } catch (Exception ignored) {
+                data.spawnDimension = Level.OVERWORLD;
+            }
+        }
 
         ListTag list = tag.getList("spawns", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
@@ -69,6 +77,7 @@ public class WorldSpawnData extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putInt("version", version);
+        tag.putString("spawn_dimension", DimensionUtil.id(spawnDimension));
         ListTag list = new ListTag();
         for (Map.Entry<ResourceKey<Level>, SpawnPoint> entry : spawns.entrySet()) {
             CompoundTag t = new CompoundTag();
@@ -127,5 +136,15 @@ public class WorldSpawnData extends SavedData {
 
     public int version() {
         return version;
+    }
+
+    /** 新玩家首次进入世界时要传送到的维度；默认主世界。 */
+    public ResourceKey<Level> spawnDimension() {
+        return spawnDimension;
+    }
+
+    public void setSpawnDimension(ResourceKey<Level> dimension) {
+        spawnDimension = dimension == null ? Level.OVERWORLD : dimension;
+        setDirty();
     }
 }

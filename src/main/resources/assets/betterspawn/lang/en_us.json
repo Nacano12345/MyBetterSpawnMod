@@ -9,5 +9,12 @@
   "command.betterspawn.spawnpoint.anchor": "Set anchor slot for %s to %s",
   "command.betterspawn.spawnpoint.clear": "Cleared %s's %s slot",
   "command.betterspawn.gotodim.result": "[BetterSpawn] %s result\n  method: %s%s\n  pos: %s\n  elapsed: %d ms\n  samples: %d  max radius: %d\n  status: %s",
-  "command.betterspawn.gotodim.verify": "[verify] landing check: %s"
+  "command.betterspawn.gotodim.verify": "[verify] landing check: %s",
+  "betterspawn.create_world.spawn_dimension": "Spawn dimension: %s (experimental)",
+  "betterspawn.create_world.spawn_dimension.tooltip": "Singleplayer/LAN host only. New players are teleported to the selected dimension on their first join.",
+  "command.betterspawn.worldspawn.spawn_dimension": "Spawn dimension: %s",
+  "command.betterspawn.worldspawn.spawn_dimension.set": "Spawn dimension set to %s",
+  "betterspawn.dimension.overworld": "Overworld",
+  "betterspawn.dimension.the_nether": "The Nether",
+  "betterspawn.dimension.the_end": "The End"
 }

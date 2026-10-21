@@ -53,38 +53,36 @@ public final class SetWorldSpawnCommand {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("worldspawn")
                 .requires(src -> src.hasPermission(2));
 
-        // global
+        // /betterspawn worldspawn global [<pos>] [<angle>] [<dimension>]
         root.then(Commands.literal("global")
                 .executes(ctx -> execGlobal(ctx, currentDimension(ctx), currentFeet(ctx), currentYaw(ctx)))
                 .then(Commands.argument("pos", Vec3Argument.vec3())
+                        .suggests((ctx, b) -> {
+                            b.suggest("~ ~ ~");
+                            return b.buildFuture();
+                        })
                         .executes(ctx -> execGlobal(ctx, currentDimension(ctx), vec(ctx), currentYaw(ctx)))
                         .then(Commands.argument("angle", FloatArgumentType.floatArg())
                                 .executes(ctx -> execGlobal(ctx, currentDimension(ctx), vec(ctx),
-                                        FloatArgumentType.getFloat(ctx, "angle")))))
-                .then(argumentDimension("dimension")
-                        .executes(ctx -> execGlobal(ctx, dimension(ctx, "dimension"), currentFeet(ctx), currentYaw(ctx)))
-                        .then(Commands.argument("pos", Vec3Argument.vec3())
-                                .executes(ctx -> execGlobal(ctx, dimension(ctx, "dimension"), vec(ctx), currentYaw(ctx)))
-                                .then(Commands.argument("angle", FloatArgumentType.floatArg())
-                                        .executes(ctx -> execGlobal(ctx, dimension(ctx, "dimension"), vec(ctx),
-                                                FloatArgumentType.getFloat(ctx, "angle")))))));
+                                        FloatArgumentType.getFloat(ctx, "angle")))
+                                .then(argumentDimension("dimension")
+                                        .executes(ctx -> execGlobal(ctx, dimension(ctx, "dimension"),
+                                                vec(ctx), FloatArgumentType.getFloat(ctx, "angle")))))));
 
-        // player
+        // /betterspawn worldspawn player <targets> [<pos>] [<angle>] [<dimension>]
         root.then(Commands.literal("player")
                 .then(Commands.argument("targets", EntityArgument.players())
                         .executes(ctx -> execPlayer(ctx, targets(ctx), null, null, null))
                         .then(Commands.argument("pos", Vec3Argument.vec3())
+                                .suggests((ctx, b) -> {
+                                    b.suggest("~ ~ ~");
+                                    return b.buildFuture();
+                                })
                                 .executes(ctx -> execPlayer(ctx, targets(ctx), null, vec(ctx), null))
                                 .then(Commands.argument("angle", FloatArgumentType.floatArg())
                                         .executes(ctx -> execPlayer(ctx, targets(ctx), null, vec(ctx),
-                                                FloatArgumentType.getFloat(ctx, "angle")))))
-                        .then(argumentDimension("dimension")
-                                .executes(ctx -> execPlayer(ctx, targets(ctx),
-                                        dimension(ctx, "dimension"), null, null))
-                                .then(Commands.argument("pos", Vec3Argument.vec3())
-                                        .executes(ctx -> execPlayer(ctx, targets(ctx),
-                                                dimension(ctx, "dimension"), vec(ctx), null))
-                                        .then(Commands.argument("angle", FloatArgumentType.floatArg())
+                                                FloatArgumentType.getFloat(ctx, "angle")))
+                                        .then(argumentDimension("dimension")
                                                 .executes(ctx -> execPlayer(ctx, targets(ctx),
                                                         dimension(ctx, "dimension"), vec(ctx),
                                                         FloatArgumentType.getFloat(ctx, "angle"))))))));
@@ -112,6 +110,12 @@ public final class SetWorldSpawnCommand {
                 .executes(ctx -> execRegenerate(ctx, currentDimension(ctx)))
                 .then(argumentDimension("dimension")
                         .executes(ctx -> execRegenerate(ctx, dimension(ctx, "dimension")))));
+
+        // spawn_dimension [dimension] —— 实验性：新玩家首次进服的目标维度
+        root.then(Commands.literal("spawn_dimension")
+                .executes(ctx -> execQuerySpawnDimension(ctx))
+                .then(argumentDimension("dimension")
+                        .executes(ctx -> execSetSpawnDimension(ctx, dimension(ctx, "dimension")))));
 
         // list
         root.then(Commands.literal("list").executes(ctx -> {
@@ -298,6 +302,27 @@ public final class SetWorldSpawnCommand {
                         + p.pos() + " angle=" + p.angle())
                 .orElse("§a已重新解析 " + dimension.location());
         ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        return 1;
+    }
+
+    private static int execSetSpawnDimension(CommandContext<CommandSourceStack> ctx,
+                                             ResourceKey<Level> dimension) {
+        MinecraftServer server = ctx.getSource().getServer();
+        if (server.getLevel(dimension) == null) {
+            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + dimension.location()));
+            return 0;
+        }
+        WorldSpawnData.get(server).setSpawnDimension(dimension);
+        String message = "§a实验性出生维度已设为 " + dimension.location()
+                + "（只影响之后首次进入世界的新玩家）";
+        ctx.getSource().sendSuccess(() -> Component.literal(message), true);
+        return 1;
+    }
+
+    private static int execQuerySpawnDimension(CommandContext<CommandSourceStack> ctx) {
+        ResourceKey<Level> dimension = WorldSpawnData.get(ctx.getSource().getServer()).spawnDimension();
+        String message = "§e实验性出生维度: " + dimension.location();
+        ctx.getSource().sendSuccess(() -> Component.literal(message), false);
         return 1;
     }
 }

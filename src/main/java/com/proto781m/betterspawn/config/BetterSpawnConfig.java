@@ -19,6 +19,7 @@ public final class BetterSpawnConfig {
     public static final ModConfigSpec.IntValue SEARCH_TIMEOUT_TICKS;
     public static final ModConfigSpec.IntValue MAX_CHUNK_LOADS;
     public static final ModConfigSpec.BooleanValue ENABLE_GOTODIM;
+    public static final ModConfigSpec.BooleanValue ENABLE_SPAWN_DIMENSION_SELECTOR;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -51,6 +52,12 @@ public final class BetterSpawnConfig {
         ENABLE_GOTODIM = b
                 .comment("是否启用 /gotodim 与 /betterspawn gotodim 测试指令。")
                 .define("enableGotoDim", true);
+        b.pop();
+
+        b.push("experimental");
+        ENABLE_SPAWN_DIMENSION_SELECTOR = b
+                .comment("实验性：在单人/局域网创建世界界面显示“出生维度”选择按钮。专用服务器不支持此界面。")
+                .define("enableSpawnDimensionSelector", true);
         b.pop();
 
         SPEC = b.build();

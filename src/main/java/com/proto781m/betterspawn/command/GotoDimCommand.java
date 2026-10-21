@@ -11,6 +11,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SearchTrace;
+import com.proto781m.betterspawn.api.SpawnMethodRegistry;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import com.proto781m.betterspawn.logic.SpawnPointResolver;
 import com.proto781m.betterspawn.logic.VerifyTaskManager;
@@ -22,8 +23,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -75,32 +78,37 @@ public final class GotoDimCommand {
     // ------------------------------------------------------------------
 
     private static int dispatch(CommandContext<CommandSourceStack> ctx, String raw) throws CommandSyntaxException {
-        String trimmed = raw == null ? "" : raw.trim();
-        if (trimmed.isEmpty()) {
-            return run(ctx, null, "");
+        MinecraftServer server = ctx.getSource().getServer();
+        List<String> tokens = tokenize(raw == null ? "" : raw.trim());
+
+        // 维度可以放在任意位置，优先取最后一个（新语法：test_arg... dim）
+        ResourceKey<Level> dimension = null;
+        List<String> options = new ArrayList<>(tokens);
+        for (int i = tokens.size() - 1; i >= 0; i--) {
+            ResourceKey<Level> key = dimensionKey(tokens.get(i), server);
+            if (key != null) {
+                dimension = key;
+                options.remove(i);
+                break;
+            }
         }
 
-        String[] parts = trimmed.split("\\s+", 2);
-        String first = parts[0];
-        String rest = parts.length > 1 ? parts[1] : "";
+        return run(ctx, dimension, String.join(" ", options));
+    }
 
-        boolean firstIsOption = first.startsWith("--")
-                || first.equals("simulate")
-                || first.equals("teleport")
-                || first.equals("verify");
-        if (firstIsOption) {
-            return run(ctx, null, trimmed);
+    private static ResourceKey<Level> dimensionKey(String token, MinecraftServer server) {
+        if (token == null || token.isBlank()
+                || token.startsWith("-")
+                || token.startsWith("{") || token.startsWith("[")
+                || token.startsWith("\"") || token.startsWith("'")) {
+            return null;
         }
-
-        ResourceLocation id = ResourceLocation.tryParse(first);
-        if (id == null) {
-            throw new SimpleCommandExceptionType(Component.literal("无效维度: " + first)).create();
+        ResourceLocation id = ResourceLocation.tryParse(token);
+        if (id == null || server == null) {
+            return null;
         }
-        ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
-        if (ctx.getSource().getServer().getLevel(dimension) == null) {
-            throw new SimpleCommandExceptionType(Component.literal("维度不存在: " + id)).create();
-        }
-        return run(ctx, dimension, rest);
+        ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, id);
+        return server.getLevel(key) == null ? null : key;
     }
 
     private static int run(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension,
@@ -228,21 +236,135 @@ public final class GotoDimCommand {
 
     private static CompletableFuture<Suggestions> suggestArgs(CommandContext<CommandSourceStack> ctx,
                                                               SuggestionsBuilder builder) {
-        MinecraftServer server = ctx.getSource().getServer();
-        if (server != null) {
-            for (ResourceLocation location : server.registryAccess()
-                    .registryOrThrow(Registries.DIMENSION).keySet()) {
-                builder.suggest(location.toString());
+        CommandSourceStack source = ctx.getSource();
+        MinecraftServer server = source.getServer();
+        String remaining = builder.getRemaining();
+
+        // greedyString 的补全必须把 range 收窄到“当前这个单词”，否则客户端会按整个参数过滤，
+        // 表现就是只有第一个参数能补全。
+        int currentStart = currentTokenStart(remaining);
+        String current = remaining.substring(currentStart);
+        List<String> before = tokenize(remaining.substring(0, currentStart));
+        String last = before.isEmpty() ? null : before.get(before.size() - 1);
+
+        SuggestionsBuilder offset = builder.createOffset(builder.getStart() + currentStart);
+
+        // 正在补全 --method 的值
+        if ("--method".equals(last)) {
+            suggestValues(offset, current, SpawnMethodRegistry.getAllMethods().keySet());
+            return offset.buildFuture();
+        }
+
+        // 正在补全 --params 的值：给出常用参数 JSON
+        if ("--params".equals(last)) {
+            if (current.isEmpty() || current.startsWith("{")) {
+                suggestValues(offset, current, List.of(
+                        "{\"max_radius\":512}",
+                        "{\"search_radius\":128}",
+                        "{\"ring_step\":64}",
+                        "{\"min_y\":32,\"max_y\":127}",
+                        "{\"center_x\":0,\"center_z\":0}",
+                        "{\"portal_width\":2,\"portal_height\":3}",
+                        "{\"build_platform\":true}",
+                        "{\"roof_scan\":8,\"min_air_height\":2}",
+                        "{\"max_chunk_loads\":64}"
+                ));
+            }
+            return offset.buildFuture();
+        }
+
+        // 数值参数不提供补全，避免误导
+        if ("--seed".equals(last) || "--repeat".equals(last) || "--timeout".equals(last)) {
+            return offset.buildFuture();
+        }
+
+        Set<String> used = new HashSet<>(before);
+        boolean hasDimension = before.stream().anyMatch(token -> dimensionKey(token, server) != null);
+
+        List<String> flags = new ArrayList<>();
+        for (String flag : List.of("--method", "--params", "--seed", "--repeat",
+                "--timeout", "--verbose", "--all")) {
+            if (!used.contains(flag)) {
+                flags.add(flag);
             }
         }
+
+        List<String> modes = new ArrayList<>();
         for (String mode : List.of("simulate", "teleport", "verify")) {
-            builder.suggest(mode);
+            if (!used.contains(mode)) {
+                modes.add(mode);
+            }
         }
-        for (String flag : List.of("--method ", "--params ", "--seed ", "--repeat ",
-                "--timeout ", "--verbose", "--all")) {
-            builder.suggest(flag);
+
+        List<String> dimensions = new ArrayList<>();
+        if (!hasDimension && server != null) {
+            server.registryAccess().registryOrThrow(Registries.DIMENSION).keySet().stream()
+                    .map(ResourceLocation::toString)
+                    .forEach(dimensions::add);
         }
-        return builder.buildFuture();
+
+        // 第一个单词：模式 / 选项；维度按新语法放在最后，输入 minecraft: 时再推维度
+        if (before.isEmpty()) {
+            if (current.startsWith("--")) {
+                suggestValues(offset, current, flags);
+            } else if (current.contains(":")) {
+                suggestValues(offset, current, dimensions);
+            } else {
+                suggestValues(offset, current, modes);
+                suggestValues(offset, current, flags);
+            }
+            return offset.buildFuture();
+        }
+
+        // 后续单词：模式 / 选项 / 维度（维度可以放在最后）
+        if (current.startsWith("--")) {
+            suggestValues(offset, current, flags);
+        } else if (current.contains(":")) {
+            suggestValues(offset, current, dimensions);
+        } else {
+            suggestValues(offset, current, modes);
+            suggestValues(offset, current, flags);
+            suggestValues(offset, current, dimensions);
+        }
+        return offset.buildFuture();
+    }
+
+    /** 返回最后一个“单词”的起始下标（尊重引号和花括号内的空格）。 */
+    private static int currentTokenStart(String raw) {
+        int start = 0;
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        int braces = 0;
+
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+                continue;
+            }
+            if (c == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                continue;
+            }
+            if (!inSingleQuote && !inDoubleQuote) {
+                if (c == '{' || c == '[') {
+                    braces++;
+                } else if (c == '}' || c == ']') {
+                    braces = Math.max(0, braces - 1);
+                } else if (Character.isWhitespace(c) && braces == 0) {
+                    start = i + 1;
+                }
+            }
+        }
+        return start;
+    }
+
+    private static void suggestValues(SuggestionsBuilder builder, String current, Iterable<String> values) {
+        for (String value : values) {
+            if (current.isEmpty() || value.startsWith(current)) {
+                builder.suggest(value);
+            }
+        }
     }
 
     // ------------------------------------------------------------------

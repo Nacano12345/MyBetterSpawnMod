@@ -9,6 +9,7 @@ import com.proto781m.betterspawn.data.SpawnPoint;
 import com.proto781m.betterspawn.data.WorldSpawnData;
 import com.proto781m.betterspawn.method.PlatformSpawnMethod;
 import com.proto781m.betterspawn.template.SpawnTemplateManager;
+import com.proto781m.betterspawn.logic.CreateWorldSpawnSelection;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -60,11 +61,18 @@ public final class DimensionSpawnInitializer {
 
         WorldSpawnData data = WorldSpawnData.get(server);
         data.set(Level.OVERWORLD, result.pos(), result.angle(), level);
+
+        ResourceKey<Level> selected = BetterSpawnConfig.ENABLE_SPAWN_DIMENSION_SELECTOR.get()
+                ? CreateWorldSpawnSelection.get()
+                : Level.OVERWORLD;
+        data.setSpawnDimension(selected);
+
         event.getSettings().setSpawn(result.pos(), result.angle());
         event.setCanceled(true);
 
         BetterSpawn.LOGGER.info("Created overworld spawn at {} using '{}' (status={})",
                 result.pos(), result.usedMethod(), result.status());
+        BetterSpawn.LOGGER.info("New world spawn dimension: {}", selected.location());
     }
 
     @SubscribeEvent
@@ -97,6 +105,11 @@ public final class DimensionSpawnInitializer {
 
         for (ServerLevel level : server.getAllLevels()) {
             initDimension(server, level, data, migrating, preserveOverworld);
+        }
+        if (data.spawnDimension() != null && server.getLevel(data.spawnDimension()) == null) {
+            BetterSpawn.LOGGER.warn("Spawn dimension {} is not loaded; falling back to overworld",
+                    data.spawnDimension().location());
+            data.setSpawnDimension(Level.OVERWORLD);
         }
         data.setDirty();
     }

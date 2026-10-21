@@ -9,5 +9,12 @@
   "command.betterspawn.spawnpoint.anchor": "已手动设置 %s 的锚槽: %s",
   "command.betterspawn.spawnpoint.clear": "已清除 %s 的 %s 槽",
   "command.betterspawn.gotodim.result": "[BetterSpawn] 维度 %s 解析结果\n  方法: %s%s\n  坐标: %s\n  耗时: %d ms\n  采样: %d  最大半径: %d\n  状态: %s",
-  "command.betterspawn.gotodim.verify": "[verify] 落地校验: %s"
+  "command.betterspawn.gotodim.verify": "[verify] 落地校验: %s",
+  "betterspawn.create_world.spawn_dimension": "出生维度: %s（实验性）",
+  "betterspawn.create_world.spawn_dimension.tooltip": "仅单人/局域网主机生效。新玩家首次进入世界时会传送到所选维度的默认出生点。",
+  "command.betterspawn.worldspawn.spawn_dimension": "出生维度: %s",
+  "command.betterspawn.worldspawn.spawn_dimension.set": "已将出生维度设为 %s",
+  "betterspawn.dimension.overworld": "主世界",
+  "betterspawn.dimension.the_nether": "下界",
+  "betterspawn.dimension.the_end": "末地"
 }

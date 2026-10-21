@@ -46,7 +46,7 @@ public final class SpawnPointCommand {
         root.then(Commands.literal("set")
                 .then(Commands.argument("targets", EntityArgument.players())
                         .executes(ctx -> execSet(ctx, targets(ctx), null, null, null))
-                        .then(Commands.argument("pos", Vec3Argument.vec3())
+                        .then(Commands.argument("pos", Vec3Argument.vec3()).suggests((ctx, b) -> { b.suggest("~ ~ ~"); return b.buildFuture(); })
                                 .executes(ctx -> execSet(ctx, targets(ctx), vec(ctx), null, null))
                                 .then(Commands.argument("angle", FloatArgumentType.floatArg())
                                         .executes(ctx -> execSet(ctx, targets(ctx), vec(ctx),
@@ -83,7 +83,7 @@ public final class SpawnPointCommand {
         return Commands.literal(name)
                 .then(Commands.argument("targets", EntityArgument.players())
                         .executes(ctx -> execSetSlot(ctx, targets(ctx), null, null, null, type))
-                        .then(Commands.argument("pos", Vec3Argument.vec3())
+                        .then(Commands.argument("pos", Vec3Argument.vec3()).suggests((ctx, b) -> { b.suggest("~ ~ ~"); return b.buildFuture(); })
                                 .executes(ctx -> execSetSlot(ctx, targets(ctx), vec(ctx), null, null, type))
                                 .then(Commands.argument("angle", FloatArgumentType.floatArg())
                                         .executes(ctx -> execSetSlot(ctx, targets(ctx), vec(ctx),

@@ -81,6 +81,21 @@ player's current yaw.
 The `dimension` field is authoritative; the file path is only used for organization.
 Rules from datapacks override the built-in defaults.
 
+### Experimental: spawn dimension in the create-world screen
+
+When `experimental.enableSpawnDimensionSelector` is enabled (default), the singleplayer/LAN
+create-world screen shows a **Spawn dimension** button that cycles Overworld / Nether / End.
+The choice is stored in the world's `betterspawn_world_spawn` data. On the **first join**, new
+players are teleported once to that dimension's default spawn; existing players keep their
+position. Dedicated servers do not have this screen and default to the Overworld; the same
+setting can be changed with:
+
+```text
+/betterspawn worldspawn spawn_dimension [<dimension>]
+```
+
+This is experimental and singleplayer/LAN-host oriented.
+
 ### Cave / no-sky dimensions
 
 `cave` scans for a safe standing point with a solid floor and a roof within

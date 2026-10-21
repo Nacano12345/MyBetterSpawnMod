@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.proto781m.betterspawn.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "CreateWorldScreenMoreTabMixin",
+    "GridLayoutTabAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
