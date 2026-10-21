@@ -1,29 +1,31 @@
 package com.proto781m.betterspawn.method;
 
-import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SpawnContext;
 import com.proto781m.betterspawn.api.SpawnMethod;
-import com.proto781m.betterspawn.api.SearchTrace;
+import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import com.proto781m.betterspawn.resolver.SpawnSafetyValidator;
+import com.proto781m.betterspawn.resolver.TerrainScanner;
+import java.util.List;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.levelgen.Heightmap;
-
-import java.util.List;
+import net.minecraft.world.level.Level;
 
 /**
- * 默认方法：复用原版主世界出生点算法的简化版。
+ * 默认方法（主世界）：从中心点开始，按同心环带向外搜索第一个安全陆地。
  *
- * <p>原版算法：在 0, 512, 1024, 1536, 2048 等环带上采样，做气候评分，
- * 再围绕最佳临时点做精搜，最后 5 区块半径找顶部非水方块。
+ * <p>参数：
+ * <ul>
+ *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
+ *   <li>{@code max_radius}：最大搜索半径，默认 512，硬上限 8192</li>
+ *   <li>{@code ring_step}：环带步长，默认 64</li>
+ *   <li>{@code max_chunk_loads}：本次最多生成多少个区块，默认取配置值</li>
+ * </ul>
  *
- * <p>本实现：优先检查中心点，然后从半径 0 开始向外搜索，
- * 用 {@link net.minecraft.world.level.levelgen.Heightmap} 快速获取高度图，
- * 找第一个安全点。足够快且效果接近原版。
- *
- * <p>注意：getHeight 会自动生成区块，无需预先检查区块是否存在。
+ * <p>实现要点：{@code level.getHeight(...)} 返回的已经是脚部 Y；
+ * 早期版本错误地再 {@code +1}，导致所有候选点都悬空一格、全部回退到平台方法。
  */
 public class DefaultSpawnMethod implements SpawnMethod {
 
@@ -35,144 +37,78 @@ public class DefaultSpawnMethod implements SpawnMethod {
     @Override
     public ResolveResult resolve(SpawnContext ctx) {
         ServerLevel level = ctx.level();
-        SearchTrace trace = ctx.trace();
-        long deadline = ctx.deadlineMillis();
+        ResourceKey<Level> dimension = ctx.rule().dimensionKey();
         RandomSource rng = RandomSource.create(ctx.seed());
 
-        // 限制最大搜索半径为 256 格（16 个区块），防止生成过多区块导致区块坐标溢出
-        int maxRadius = Math.min(256, ctx.rule().getInt("max_radius", 256));
         int centerX = ctx.rule().getInt("center_x", 0);
         int centerZ = ctx.rule().getInt("center_z", 0);
+        int maxRadius = clamp(ctx.rule().getInt("max_radius", 512), 0, 8192);
+        int ringStep = clamp(ctx.rule().getInt("ring_step", 64), 16, 1024);
+        int maxChunkLoads = clamp(
+                ctx.rule().getInt("max_chunk_loads", BetterSpawnConfig.MAX_CHUNK_LOADS.get()),
+                1, 4096);
 
-        // 1. 先检查中心点 (0,0)
-        {
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, centerX, centerZ);
-            // 检查是否为虚空世界（高度异常低）
-            if (y < level.getMinBuildHeight() + 10) {
-                BetterSpawn.LOGGER.warn("[DefaultSpawnMethod] Void world detected at center (y={}), skipping default search", y);
-            } else {
-                BlockPos candidate = new BlockPos(centerX, y + 1, centerZ);
-                if (SpawnSafetyValidator.isSafe(level, candidate)) {
-                    List<String> warnings = SpawnSafetyValidator.validate(level, candidate);
-                    BetterSpawn.LOGGER.info("[DefaultSpawnMethod] Found safe spawn at center: {}", candidate);
-                    return new ResolveResult(candidate, ctx.rule().dimensionKey(), RandomSource.create(ctx.seed()).nextFloat() * 360.0F, id(), false,
-                            0, 1, 0, ResolveResult.Status.OK, warnings);
-                }
-            }
+        TerrainScanner scanner = new TerrainScanner(level, ctx.deadlineMillis(), maxChunkLoads);
+        float angle = rng.nextFloat() * 360.0F;
+        int radiusReached = 0;
+
+        // 1. 中心点优先
+        BlockPos center = scanner.findSurface(centerX, centerZ, TerrainScanner.LiquidPolicy.REJECT_LIQUID);
+        if (center != null) {
+            ctx.trace().ring(0, 1, 1);
+            return ok(level, dimension, center, angle, scanner, 0);
         }
 
-        // centerX 和 centerZ 已在上面定义，直接使用
-
-        // 先搜索中心区域 (0-64)
-        for (int radius = 0; radius <= 64; radius += 32) {
-            if (searchRadius(level, centerX, centerZ, radius, RandomSource.create(ctx.seed()), ctx, null)) {
-                // 找到了，实际返回由内部处理
-            }
-        }
-
-        // 然后同心环带搜索 (64, 128, 192, 256)
-        for (int radius = 64; radius <= maxRadius; radius += 64) {
-            if (System.currentTimeMillis() > deadline) {
-                return ResolveResult.timeout(id());
-            }
-            
-            int samplesPerRing = Math.max(16, 360 / Math.max(1, radius / 32));
-            int angleStep = 360 / samplesPerRing;
-            
-            for (int angle = 0; angle < 360; angle += angleStep) {
-                if (System.currentTimeMillis() > deadline) {
-                    return ResolveResult.timeout(id());
-                }
-                double rad = Math.toRadians(angle);
-                int x = centerX + (int) (radius * Math.cos(rad));
-                int z = centerZ + (int) (radius * Math.sin(rad));
-
-                // 限制坐标范围，防止区块坐标溢出
-                if (x < -30000000 || x > 30000000 || z < -30000000 || z > 30000000) {
+        // 2. 同心环带
+        for (int radius = ringStep; radius <= maxRadius; radius += ringStep) {
+            radiusReached = radius;
+            int count = clamp(radius / 16, 8, 48);
+            int accepted = 0;
+            for (int i = 0; i < count; i++) {
+                double radians = (Math.PI * 2.0) * (i + 0.5) / count;
+                int x = centerX + (int) Math.round(radius * Math.cos(radians));
+                int z = centerZ + (int) Math.round(radius * Math.sin(radians));
+                if (Math.abs(x) > 30_000_000 || Math.abs(z) > 30_000_000) {
                     continue;
                 }
 
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-                
-                // 检查是否为虚空世界（高度异常低）
-                if (y < level.getMinBuildHeight() + 10) {
-                    continue;
-                }
-                
-                BlockPos candidate = new BlockPos(x, y + 1, z);
-
-                if (SpawnSafetyValidator.isSafe(level, candidate)) {
-                    List<String> warnings = SpawnSafetyValidator.validate(level, candidate);
-                    BetterSpawn.LOGGER.info("[DefaultSpawnMethod] Found safe spawn at radius {}: {}", radius, new BlockPos(x, y + 1, z));
-                    return new ResolveResult(candidate, ctx.rule().dimensionKey(), RandomSource.create(ctx.seed()).nextFloat() * 360.0F, id(), false,
-                            0, 1, radius, ResolveResult.Status.OK, SpawnSafetyValidator.validate(level, new BlockPos(x, y + 1, z)));
+                BlockPos feet = scanner.findSurface(x, z, TerrainScanner.LiquidPolicy.REJECT_LIQUID);
+                if (feet != null) {
+                    accepted++;
+                    ctx.trace().ring(radius, count, accepted);
+                    return ok(level, dimension, feet, angle, scanner, radius);
                 }
             }
-            trace.ring(radius, 360 / Math.max(1, radius / 32), 0);
+            ctx.trace().ring(radius, count, accepted);
+
+            if (scanner.timedOut()) {
+                return failed(dimension, scanner, radiusReached, ResolveResult.Status.TIMEOUT,
+                        List.of("搜索超时"));
+            }
+            if (scanner.budgetExhausted()) {
+                return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
+                        List.of("区块加载预算耗尽（" + maxChunkLoads + "），未找到安全点"));
+            }
         }
 
-        // 兜底：在中心附近 10x10 范围内暴力搜索
-        BlockPos fallback = findSafeNearby(level, centerX, centerZ, 10);
-        if (fallback != null) {
-            BetterSpawn.LOGGER.warn("[DefaultSpawnMethod] Fallback to nearby scan, found: {}", fallback);
-            return new ResolveResult(fallback, ctx.rule().dimensionKey(), RandomSource.create(ctx.seed()).nextFloat() * 360.0F, id(), false,
-                    0, 1, 0, ResolveResult.Status.OK, SpawnSafetyValidator.validate(level, new BlockPos(centerX, level.getHeight(Heightmap.Types.MOTION_BLOCKING, centerX, centerZ) + 1, centerZ)));
-        }
-
-        return ResolveResult.empty(id(), ResolveResult.Status.UNSAFE);
+        return failed(dimension, scanner, radiusReached, ResolveResult.Status.UNSAFE,
+                List.of("在半径 " + maxRadius + " 内未找到安全点"));
     }
 
-    private boolean searchRadius(ServerLevel level, int centerX, int centerZ, int radius, 
-                                 RandomSource rng, SpawnContext ctx, SearchTrace trace) {
-        int samplesPerRing = Math.max(16, 360 / Math.max(1, radius / 32));
-        int angleStep = 360 / samplesPerRing;
-        
-        for (int angle = 0; angle < 360; angle += 360 / samplesPerRing) {
-            double rad = Math.toRadians(angle);
-            int x = centerX + (int) (radius * Math.cos(rad));
-            int z = centerZ + (int) (radius * Math.sin(rad));
-            
-            // 限制坐标范围，防止区块坐标溢出
-            if (x < -30000000 || x > 30000000 || z < -30000000 || z > 30000000) {
-                continue;
-            }
-            
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-            
-            // 检查是否为虚空世界（高度异常低）
-            if (y < level.getMinBuildHeight() + 10) {
-                continue;
-            }
-            
-            BlockPos candidate = new BlockPos(x, y + 1, z);
-            
-            if (SpawnSafetyValidator.isSafe(level, candidate)) {
-                return true;
-            }
-        }
-        return false;
+    private static ResolveResult ok(ServerLevel level, ResourceKey<Level> dimension, BlockPos pos,
+                                    float angle, TerrainScanner scanner, int radius) {
+        return new ResolveResult(pos, dimension, angle, "default", false, 0L,
+                scanner.samples(), radius, ResolveResult.Status.OK,
+                SpawnSafetyValidator.validate(level, pos));
     }
 
-    private BlockPos findSafeNearby(ServerLevel level, int centerX, int centerZ, int range) {
-        for (int dx = -range; dx <= range; dx++) {
-            for (int dz = -range; dz <= range; dz++) {
-                int x = centerX + dx;
-                int z = centerZ + dz;
-                // 限制坐标范围
-                if (x < -30000000 || x > 30000000 || z < -30000000 || z > 30000000) {
-                    continue;
-                }
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-                // 检查是否为虚空世界
-                if (y < level.getMinBuildHeight() + 10) {
-                    continue;
-                }
-                BlockPos candidate = new BlockPos(x, y + 1, z);
-                if (com.proto781m.betterspawn.resolver.SpawnSafetyValidator.isSafe(level, candidate)) {
-                    return candidate;
-                }
-            }
-        }
-        return null;
+    private static ResolveResult failed(ResourceKey<Level> dimension, TerrainScanner scanner,
+                                        int radius, ResolveResult.Status status, List<String> warnings) {
+        return new ResolveResult(null, dimension, 0.0F, "default", false, 0L,
+                scanner.samples(), radius, status, warnings);
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

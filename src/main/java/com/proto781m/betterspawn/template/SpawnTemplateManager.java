@@ -1,31 +1,37 @@
 package com.proto781m.betterspawn.template;
 
+import com.google.gson.JsonElement;
+import com.proto781m.betterspawn.BetterSpawn;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 
 /**
  * 模板管理器：缓存所有已加载的 {@link SpawnRule}，支持运行时 reload。
  *
- * <p>资源路径约定：{@code data/<namespace>/spawn_rules/<path>.json}
- * 经过 {@code SimpleJsonResourceReloadListener} 后，按 dimension id 索引。
+ * <p>资源路径约定：{@code data/<namespace>/spawn_rules/...} 下的 JSON 文件。
+ * 数据包规则按 JSON 里的 {@code dimension} 字段索引，并覆盖同名内置模板。
  *
- * <p>内置原版三个维度的默认模板作为兜底，数据包可覆盖。
+ * <p>内置模板在类加载时就放进规则表，因此即使服务器还没完成数据包 reload，
+ * {@link #get(ResourceLocation)} 也不会返回空——这是早期版本在
+ * {@code ServerAboutToStartEvent} 阶段全部回退到平台方法的另一个原因。
+ *
+ * <p>规则表使用 {@code volatile} 整体替换，避免客户端/服务端 reload 线程与解析线程
+ * 同时读写同一个 HashMap。
  */
 public final class SpawnTemplateManager {
 
-    private static final Map<ResourceLocation, SpawnRule> RULES = new HashMap<>();
-    private static final Gson GSON = new Gson();
-
     /** 内置原版三个维度的默认模板（兜底，数据包可覆盖）。 */
-    private static final Map<ResourceLocation, SpawnRule> BUILTIN_DEFAULTS = createBuiltinDefaults();
+    private static final Map<ResourceLocation, SpawnRule> BUILTIN_DEFAULTS =
+            Map.copyOf(createBuiltinDefaults());
+
+    /** 当前生效的规则：内置 + 数据包覆盖。整体替换，保证读线程安全。 */
+    private static volatile Map<ResourceLocation, SpawnRule> rules = BUILTIN_DEFAULTS;
 
     private SpawnTemplateManager() {
     }
@@ -40,9 +46,8 @@ public final class SpawnTemplateManager {
                 Map.of(
                         "center_x", 0,
                         "center_z", 0,
-                        "max_radius", 8192,
-                        "ring_step", 512,
-                        "sample_step", 64
+                        "max_radius", 512,
+                        "ring_step", 64
                 ),
                 "platform",
                 Map.of(
@@ -61,7 +66,8 @@ public final class SpawnTemplateManager {
                         "max_y", 127,
                         "center_x", 0,
                         "center_z", 0,
-                        "search_radius", 512,
+                        "search_radius", 128,
+                        "ring_step", 32,
                         "avoid_lava", true
                 ),
                 "platform",
@@ -72,7 +78,7 @@ public final class SpawnTemplateManager {
                 )
         ));
 
-        // 末地：fixed 方法
+        // 末地：fixed 方法（主岛外的定点坐标，由平台方法保底搭台）
         defaults.put(ResourceLocation.parse("minecraft:the_end"), new SpawnRule(
                 ResourceLocation.parse("minecraft:the_end"),
                 "fixed",
@@ -92,29 +98,35 @@ public final class SpawnTemplateManager {
         return defaults;
     }
 
-    /** 由 reload listener 调用，整体替换规则表（数据包优先，内置兜底）。 */
+    /**
+     * 由 reload listener 调用：整体替换规则表。数据包规则覆盖内置规则。
+     */
     public static void reload(Map<ResourceLocation, JsonElement> data) {
-        Map<ResourceLocation, SpawnRule> parsed = new HashMap<>();
+        Map<ResourceLocation, SpawnRule> parsed = new HashMap<>(BUILTIN_DEFAULTS);
+        int fromPack = 0;
 
-        // 1. 先加载内置默认值
-        parsed.putAll(BUILTIN_DEFAULTS);
-
-        // 2. 数据包加载的模板覆盖内置值
         for (Map.Entry<ResourceLocation, JsonElement> entry : data.entrySet()) {
             SpawnRule rule = SpawnTemplateLoader.load(entry.getKey(), entry.getValue());
             if (rule != null) {
-                // 用 rule.dimension() (ResourceLocation) 作为 key
                 parsed.put(rule.dimension(), rule);
+                fromPack++;
             }
         }
 
-        RULES.clear();
-        RULES.putAll(parsed);
-        com.proto781m.betterspawn.BetterSpawn.LOGGER.info("Loaded {} spawn template(s) (including {} builtin)", RULES.size(), BUILTIN_DEFAULTS.size());
+        rules = Map.copyOf(parsed);
+        BetterSpawn.LOGGER.info("Loaded {} spawn template(s): {} from datapack, {} builtin base",
+                rules.size(), fromPack, BUILTIN_DEFAULTS.size());
+    }
+
+    /** 确保内置模板已就位（正常情况类加载时已完成，这里只做防御）。 */
+    public static void ensureLoaded() {
+        if (rules.isEmpty()) {
+            rules = BUILTIN_DEFAULTS;
+        }
     }
 
     public static Optional<SpawnRule> get(ResourceLocation dimension) {
-        return Optional.ofNullable(RULES.get(dimension));
+        return Optional.ofNullable(rules.get(dimension));
     }
 
     public static Optional<SpawnRule> get(String dimension) {
@@ -126,10 +138,10 @@ public final class SpawnTemplateManager {
     }
 
     public static Collection<SpawnRule> all() {
-        return RULES.values();
+        return List.copyOf(rules.values());
     }
 
     public static boolean isEmpty() {
-        return RULES.isEmpty();
+        return rules.isEmpty();
     }
 }

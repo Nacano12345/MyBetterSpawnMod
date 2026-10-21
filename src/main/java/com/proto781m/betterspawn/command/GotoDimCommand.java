@@ -1,26 +1,33 @@
 package com.proto781m.betterspawn.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.FloatArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import com.proto781m.betterspawn.config.BetterSpawnConfig;
+import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.api.ResolveResult;
-import com.proto781m.betterspawn.api.SpawnContext;
+import com.proto781m.betterspawn.api.SearchTrace;
+import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import com.proto781m.betterspawn.logic.SpawnPointResolver;
-import com.proto781m.betterspawn.resolver.SpawnMethodResolver;
+import com.proto781m.betterspawn.logic.VerifyTaskManager;
+import com.proto781m.betterspawn.template.SpawnRule;
+import com.proto781m.betterspawn.template.SpawnTemplateLoader;
 import com.proto781m.betterspawn.template.SpawnTemplateManager;
+import com.proto781m.betterspawn.util.TeleportHelper;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.ResourceKeyArgument;
-import net.minecraft.commands.synchronization.SuggestionProviders;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -28,312 +35,423 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.Level;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
- * /betterspawn gotodim 测试指令：沙盒模拟维度默认出生点解析。
+ * {@code /gotodim}（同时注册为 {@code /betterspawn gotodim}）：沙盒测试信息。
  *
- * <p>模式：
- * <ul>
- *   <li>{@code simulate}：只跑解析链，打印报告，不传送，不落库（默认，权限 0）</li>
- *   <li>{@code teleport}：解析后传送玩家到结果点（权限 2）</li>
- *   <li>{@code verify}：传送 + 等待若干 tick 后校验落地/液体/虚空（权限 2）</li>
- * </ul>
+ * <pre>
+ * /gotodim [&lt;dimension&gt;] [simulate|teleport|verify] [--method &lt;id&gt;] [--params &lt;json&gt;]
+ *          [--seed &lt;n&gt;] [--repeat &lt;n&gt;] [--timeout &lt;ticks&gt;] [--verbose] [--all]
+ * </pre>
  *
- * <p>选项：
- * <ul>
- *   <li>{@code --method} 临时覆盖方法</li>
- *   <li>{@code --params} 临时覆盖参数（JSON）</li>
- *   <li>{@code --seed} 覆盖种子</li>
- *   <li>{@code --repeat} 重复 N 次统计</li>
- *   <li>{@code --timeout} 超时 tick</li>
- *   <li>{@code --verbose} 打印详细 trace</li>
- *   <li>{@code --all} 对所有已注册维度各跑一次</li>
- * </ul>
- * </p>
+ * <p>所有参数都可省略：维度默认当前维度，模式默认 {@code simulate}。
+ * {@code --method}/{@code --params} 会真正应用临时规则，不再像旧实现那样被忽略。
  */
 public final class GotoDimCommand {
+
+    private static final SimpleCommandExceptionType ERROR = new SimpleCommandExceptionType(
+            Component.literal("gotodim 参数错误"));
 
     private GotoDimCommand() {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("gotodim")
+        dispatcher.register(buildRoot());
+        dispatcher.register(Commands.literal("betterspawn").then(buildRoot()));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> buildRoot() {
+        return Commands.literal("gotodim")
                 .requires(src -> BetterSpawnConfig.ENABLE_GOTODIM.get() && src.hasPermission(0))
-                .then(Commands.argument("dimension", ResourceKeyArgument.key(Registries.DIMENSION))
-                        .suggests((ctx, builder) -> suggestDimensions(ctx.getSource(), builder))
-                        .executes(ctx -> exec(ctx, ctx.getArgument("dimension", ResourceKey.class), "simulate"))
-                        .then(Commands.literal("simulate").executes(ctx -> exec(ctx, ctx.getArgument("dimension", ResourceKey.class), "simulate")))
-                        .then(Commands.literal("teleport").executes(ctx -> exec(ctx, ctx.getArgument("dimension", ResourceKey.class), "teleport")))
-                        .then(Commands.literal("verify").executes(ctx -> exec(ctx, ctx.getArgument("dimension", ResourceKey.class), "verify")))
-                        .then(Commands.literal("--method")
-                                .then(Commands.argument("method", StringArgumentType.string())
-                                        .suggests((ctx, builder) -> suggestMethods(builder))
-                                        .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "method"))))
-                        .then(Commands.literal("--params")
-                                .then(Commands.argument("params", StringArgumentType.greedyString())
-                                        .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "params"))))
-                        .then(Commands.literal("--seed")
-                                .then(Commands.argument("seed", IntegerArgumentType.integer())
-                                        .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "seed"))))
-                        .then(Commands.literal("--repeat")
-                                .then(Commands.argument("count", IntegerArgumentType.integer(1, 100))
-                                        .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "repeat"))))
-                        .then(Commands.literal("--timeout")
-                                .then(Commands.argument("ticks", IntegerArgumentType.integer(1, 2000))
-                                        .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "timeout"))))
-                        .then(Commands.literal("--verbose")
-                                .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "verbose")))
-                        .then(Commands.literal("--all")
-                                .executes(ctx -> execWithOverride(ctx, ctx.getArgument("dimension", ResourceKey.class), "all"))));
-
-        dispatcher.register(Commands.literal("betterspawn").then(root));
+                .executes(ctx -> run(ctx, null, ""))
+                .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .suggests(GotoDimCommand::suggestArgs)
+                        .executes(ctx -> dispatch(ctx, StringArgumentType.getString(ctx, "args"))));
     }
 
-    private static CompletableFuture<Suggestions> suggestDimensions(CommandSourceStack src, SuggestionsBuilder builder) {
-        MinecraftServer server = src.getServer();
-        if (server != null) {
-            for (ResourceLocation loc : server.registryAccess().registryOrThrow(Registries.DIMENSION).keySet()) {
-                builder.suggest(loc.toString());
-            }
+    // ------------------------------------------------------------------
+    // 参数解析
+    // ------------------------------------------------------------------
+
+    private static int dispatch(CommandContext<CommandSourceStack> ctx, String raw) throws CommandSyntaxException {
+        String trimmed = raw == null ? "" : raw.trim();
+        if (trimmed.isEmpty()) {
+            return run(ctx, null, "");
         }
-        return builder.buildFuture();
-    }
 
-    private static CompletableFuture<Suggestions> suggestMethods(SuggestionsBuilder builder) {
-        for (String id : com.proto781m.betterspawn.api.SpawnMethodRegistry.getAllMethods().keySet()) {
-            builder.suggest(id);
+        String[] parts = trimmed.split("\\s+", 2);
+        String first = parts[0];
+        String rest = parts.length > 1 ? parts[1] : "";
+
+        boolean firstIsOption = first.startsWith("--")
+                || first.equals("simulate")
+                || first.equals("teleport")
+                || first.equals("verify");
+        if (firstIsOption) {
+            return run(ctx, null, trimmed);
         }
-        return builder.buildFuture();
+
+        ResourceLocation id = ResourceLocation.tryParse(first);
+        if (id == null) {
+            throw new SimpleCommandExceptionType(Component.literal("无效维度: " + first)).create();
+        }
+        ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
+        if (ctx.getSource().getServer().getLevel(dimension) == null) {
+            throw new SimpleCommandExceptionType(Component.literal("维度不存在: " + id)).create();
+        }
+        return run(ctx, dimension, rest);
     }
 
-    private static int exec(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension, String mode) throws CommandSyntaxException {
-        GotoDimOptions opts = new GotoDimOptions(mode);
-        return runGotoDim(ctx, dimension, opts);
-    }
-
-    private static int execWithOverride(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension, String optName) throws CommandSyntaxException {
-        GotoDimOptions opts = new GotoDimOptions("simulate");
-        String raw = ctx.getInput().substring(ctx.getInput().indexOf(optName));
-        if (raw.startsWith("--method ")) opts.methodOverride = raw.substring(9).split(" ")[0];
-        if (raw.startsWith("--params ")) opts.paramsOverride = raw.substring(9);
-        if (raw.startsWith("--seed ")) opts.seedOverride = Long.parseLong(raw.substring(7).split(" ")[0]);
-        if (raw.startsWith("--repeat ")) opts.repeat = Integer.parseInt(raw.substring(9).split(" ")[0]);
-        if (raw.startsWith("--timeout ")) opts.timeoutTicks = Integer.parseInt(raw.substring(10).split(" ")[0]);
-        if (raw.contains("--verbose")) opts.verbose = true;
-        if (raw.contains("--all")) opts.all = true;
-        return runGotoDim(ctx, dimension, opts);
-    }
-
-    private static int runGotoDim(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension, GotoDimOptions opts) throws CommandSyntaxException {
+    private static int run(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension,
+                           String rawOptions) throws CommandSyntaxException {
+        Options options = parseOptions(rawOptions);
         MinecraftServer server = ctx.getSource().getServer();
-        ServerLevel level = server.getLevel(dimension);
+
+        if (options.all) {
+            Options simulateOnly = options.copy();
+            simulateOnly.mode = "simulate";
+            int success = 0;
+            for (ServerLevel level : server.getAllLevels()) {
+                if (runOne(ctx, level, simulateOnly, false) > 0) {
+                    success++;
+                }
+            }
+            return success > 0 ? 1 : 0;
+        }
+
+        ResourceKey<Level> target = dimension != null
+                ? dimension
+                : ctx.getSource().getLevel().dimension();
+        ServerLevel level = server.getLevel(target);
         if (level == null) {
-            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + dimension.location()));
+            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + target.location()));
             return 0;
         }
-
-        if (opts.all) {
-            // 对所有维度跑一次
-            for (ResourceLocation loc : server.registryAccess().registryOrThrow(Registries.DIMENSION).keySet()) {
-                ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, loc);
-                GotoDimOptions copy = new GotoDimOptions("simulate");
-                copy.repeat = opts.repeat;
-                copy.timeoutTicks = opts.timeoutTicks;
-                copy.verbose = opts.verbose;
-                runSingle(ctx, dim, server, copy);
-            }
-            return 1;
-        }
-
-        return runSingle(ctx, dimension, server, opts);
+        return runOne(ctx, level, options, true);
     }
 
-    private static int runSingle(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension,
-                                 MinecraftServer server, GotoDimOptions opts) throws CommandSyntaxException {
-        ServerLevel level = server.getLevel(dimension);
-        if (level == null) {
-            ctx.getSource().sendFailure(Component.literal("§c维度不存在: " + dimension.location()));
-            return 0;
+    private static Options parseOptions(String raw) throws CommandSyntaxException {
+        Options options = new Options();
+        List<String> tokens = tokenize(raw);
+
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i);
+            switch (token) {
+                case "simulate", "teleport", "verify" -> options.mode = token;
+                case "--method" -> options.method = value(tokens, ++i, token);
+                case "--params" -> options.params = value(tokens, ++i, token);
+                case "--seed" -> options.seed = parseLong(value(tokens, ++i, token), token);
+                case "--repeat" -> options.repeat = clamp(parseInt(value(tokens, ++i, token), token), 1, 100);
+                case "--timeout" -> options.timeoutTicks = clamp(parseInt(value(tokens, ++i, token), token), 1, 2000);
+                case "--verbose" -> options.verbose = true;
+                case "--all" -> options.all = true;
+                default -> throw new SimpleCommandExceptionType(
+                        Component.literal("未知参数: " + token)).create();
+            }
+        }
+        return options;
+    }
+
+    private static String value(List<String> tokens, int index, String option) throws CommandSyntaxException {
+        if (index >= tokens.size()) {
+            throw new SimpleCommandExceptionType(
+                    Component.literal(option + " 缺少参数值")).create();
+        }
+        return tokens.get(index);
+    }
+
+    private static long parseLong(String value, String option) throws CommandSyntaxException {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException ex) {
+            throw new SimpleCommandExceptionType(
+                    Component.literal(option + " 需要整数: " + value)).create();
+        }
+    }
+
+    private static int parseInt(String value, String option) throws CommandSyntaxException {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            throw new SimpleCommandExceptionType(
+                    Component.literal(option + " 需要整数: " + value)).create();
+        }
+    }
+
+    /**
+     * 按空白拆分参数，但保留花括号/引号内的空白，方便 {@code --params {"x": 1}}。
+     */
+    private static List<String> tokenize(String raw) {
+        List<String> tokens = new ArrayList<>();
+        if (raw == null || raw.isBlank()) {
+            return tokens;
         }
 
-        boolean isSimulate = "simulate".equals(opts.mode);
-        boolean isTeleport = "teleport".equals(opts.mode) || "verify".equals(opts.mode);
-        boolean isVerify = "verify".equals(opts.mode);
+        StringBuilder current = new StringBuilder();
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        int braces = 0;
 
-        if (isTeleport && ctx.getSource().getEntity() instanceof ServerPlayer player) {
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '\'' && !inDoubleQuote) {
+                // 单引号只用于 shell 风格的参数包裹，不写进 JSON
+                inSingleQuote = !inSingleQuote;
+                continue;
+            }
+            if (c == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                current.append(c);
+                continue;
+            }
+            if (!inSingleQuote && !inDoubleQuote) {
+                if (c == '{' || c == '[') {
+                    braces++;
+                } else if (c == '}' || c == ']') {
+                    braces = Math.max(0, braces - 1);
+                } else if (Character.isWhitespace(c) && braces == 0) {
+                    if (current.length() > 0) {
+                        tokens.add(current.toString());
+                        current.setLength(0);
+                    }
+                    continue;
+                }
+            }
+            current.append(c);
+        }
+        if (current.length() > 0) {
+            tokens.add(current.toString());
+        }
+        return tokens;
+    }
+
+    private static CompletableFuture<Suggestions> suggestArgs(CommandContext<CommandSourceStack> ctx,
+                                                              SuggestionsBuilder builder) {
+        MinecraftServer server = ctx.getSource().getServer();
+        if (server != null) {
+            for (ResourceLocation location : server.registryAccess()
+                    .registryOrThrow(Registries.DIMENSION).keySet()) {
+                builder.suggest(location.toString());
+            }
+        }
+        for (String mode : List.of("simulate", "teleport", "verify")) {
+            builder.suggest(mode);
+        }
+        for (String flag : List.of("--method ", "--params ", "--seed ", "--repeat ",
+                "--timeout ", "--verbose", "--all")) {
+            builder.suggest(flag);
+        }
+        return builder.buildFuture();
+    }
+
+    // ------------------------------------------------------------------
+    // 单次/多次执行
+    // ------------------------------------------------------------------
+
+    private static int runOne(CommandContext<CommandSourceStack> ctx, ServerLevel level,
+                              Options options, boolean allowTeleport) throws CommandSyntaxException {
+        boolean teleport = allowTeleport
+                && ("teleport".equals(options.mode) || "verify".equals(options.mode));
+        boolean verify = allowTeleport && "verify".equals(options.mode);
+
+        if (teleport) {
             if (!ctx.getSource().hasPermission(2)) {
                 ctx.getSource().sendFailure(Component.literal("§cteleport/verify 需要权限等级 2"));
                 return 0;
             }
-        }
-
-        // 统计累计器
-        int total = opts.repeat > 0 ? opts.repeat : 1;
-        long totalTime = 0;
-        int totalSamples = 0;
-        int successCount = 0;
-        int fallbackCount = 0;
-
-        ResolveResult lastResult = null;
-
-        for (int i = 0; i < total; i++) {
-            if (opts.repeat > 0 && i > 0) {
-                ctx.getSource().sendSystemMessage(Component.literal("§7第 " + (i + 1) + "/" + total + " 次..."));
-            }
-
-            // 构造临时规则（覆盖 method/params）
-            var ruleOpt = SpawnTemplateManager.get(dimension.location());
-            if (ruleOpt.isEmpty()) {
-                ctx.getSource().sendFailure(Component.literal("§c该维度无模板，跳过"));
+            if (!(ctx.getSource().getEntity() instanceof ServerPlayer)) {
+                ctx.getSource().sendFailure(Component.literal("§cteleport/verify 只能由玩家执行"));
                 return 0;
             }
-            var rule = ruleOpt.get();
+        }
 
-            // 应用覆盖
-            if (opts.methodOverride != null) {
-                rule = new com.proto781m.betterspawn.template.SpawnRule(
-                        rule.dimension(), opts.methodOverride, rule.parameters(),
-                        rule.fallback(), rule.fallbackParameters());
-            }
-            if (opts.paramsOverride != null) {
-                try {
-                    JsonElement params = JsonParser.parseString(opts.paramsOverride);
-                    if (params.isJsonObject()) {
-                        rule = new com.proto781m.betterspawn.template.SpawnRule(
-                                rule.dimension(), rule.method(),
-                                com.proto781m.betterspawn.template.SpawnTemplateLoader.parseParams(params.getAsJsonObject()),
-                                rule.fallback(), rule.fallbackParameters());
-                    }
-                } catch (Exception ex) {
-                    ctx.getSource().sendFailure(Component.literal("§cparams JSON 解析失败: " + ex.getMessage()));
-                    return 0;
-                }
-            }
+        SpawnRule base = SpawnTemplateManager.get(level.dimension().location()).orElse(null);
+        if (base == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "§c维度 " + level.dimension().location() + " 没有出生点模板"));
+            return 0;
+        }
+        SpawnRule rule = applyOverrides(base, options);
 
-            long seed = opts.seedOverride != null ? opts.seedOverride : level.getSeed();
-            long deadline = System.currentTimeMillis() + (opts.timeoutTicks > 0 ? opts.timeoutTicks : BetterSpawnConfig.SEARCH_TIMEOUT_TICKS.get()) * 50L;
+        int total = Math.max(1, options.repeat);
+        long totalTime = 0;
+        long totalSamples = 0;
+        long minTime = Long.MAX_VALUE;
+        long maxTime = 0;
+        int successCount = 0;
+        int fallbackCount = 0;
+        int maxRadius = 0;
 
-            SpawnContext spawnCtx = new SpawnContext(
-                    level, rule, seed, true, // simulate=true：不落库
-                    deadline, new com.proto781m.betterspawn.api.SearchTrace());
+        for (int i = 0; i < total; i++) {
+            long seed = (options.seed != null ? options.seed : level.getSeed()) + i;
+            int timeoutTicks = options.timeoutTicks > 0
+                    ? options.timeoutTicks
+                    : Math.max(1, BetterSpawnConfig.SEARCH_TIMEOUT_TICKS.get());
+            SearchTrace trace = new SearchTrace();
+            long deadline = System.currentTimeMillis() + timeoutTicks * 50L;
 
-            ResolveResult result = SpawnPointResolver.resolveFromTemplate(server, dimension, true);
-
-            lastResult = result;
+            ResolveResult result = SpawnPointResolver.resolveRule(
+                    level, rule, seed, true, deadline, trace);
 
             totalTime += result.elapsedMillis();
             totalSamples += result.samples();
-            if (result.status() == ResolveResult.Status.OK) successCount++;
-            if (result.fallbackUsed()) fallbackCount++;
-
-            // 单次输出
-            if (opts.repeat <= 1 || opts.verbose) {
-                printResult(ctx, dimension, result, spawnCtx.trace(), opts.verbose);
+            minTime = Math.min(minTime, result.elapsedMillis());
+            maxTime = Math.max(maxTime, result.elapsedMillis());
+            maxRadius = Math.max(maxRadius, result.maxRadiusReached());
+            if (result.pos() != null) {
+                successCount++;
+            }
+            if (result.fallbackUsed()) {
+                fallbackCount++;
             }
 
-            // teleport / verify
-            if (isTeleport && lastResult != null && lastResult.pos() != null && ctx.getSource().getEntity() instanceof ServerPlayer player) {
-                com.proto781m.betterspawn.util.TeleportHelper.teleport(player, level, lastResult.pos().getX() + 0.5, lastResult.pos().getY(), lastResult.pos().getZ() + 0.5, lastResult.angle(), player.getXRot());
-                ctx.getSource().sendSystemMessage(Component.literal("§a已传送到 " + lastResult.pos()));
-
-                if (isVerify) {
-                    // 简单轮询验证：20 tick 后检查
-                    server.execute(() -> {
-                        try {
-                            Thread.sleep(1000); // 20 tick ≈ 1s
-                        } catch (InterruptedException ignored) {}
-                        if (player.isAlive()) {
-                            boolean onGround = player.onGround();
-                            boolean inLiquid = player.isInFluidType();
-                            boolean inVoid = player.getY() < level.getMinBuildHeight();
-                            String msg = "§e[verify] 落地校验: " + (onGround ? "站在方块上" : "未落地") +
-                                    (inLiquid ? " §c在液体中" : "") +
-                                    (inVoid ? " §c掉入虚空" : "");
-                            player.sendSystemMessage(Component.literal(msg));
-                        }
-                    });
-                }
+            if (total == 1 || options.verbose) {
+                printResult(ctx, level, result, trace, options.verbose);
             }
 
-            // 汇总统计
-            if (total > 1) {
-                ctx.getSource().sendSystemMessage(Component.literal(
-                        "§e=== " + dimension.location() + " " + total + " 次重复测试 ==="));
-                ctx.getSource().sendSystemMessage(Component.literal(
-                        "  成功率: " + String.format("%.1f%%", successCount * 100.0 / total) +
-                                "  fallback率: " + String.format("%.1f%%", fallbackCount * 100.0 / total)));
-                ctx.getSource().sendSystemMessage(Component.literal(
-                        "  耗时 min/avg/max: N/A / " + (totalTime / total) + " / N/A ms" +
-                                "  平均采样: " + (totalSamples / total) +
-                                "  最大半径: " + (lastResult != null ? lastResult.maxRadiusReached() : 0)));
+            if (result.pos() != null) {
+                executeTeleport(ctx, level, result, teleport, verify);
             }
         }
 
-        return 1;
+        if (total > 1) {
+            long avgTime = totalTime / total;
+            long avgSamples = totalSamples / total;
+            ctx.getSource().sendSystemMessage(Component.literal(
+                    "§e=== " + level.dimension().location() + " 重复测试 " + total + " 次 ==="));
+            ctx.getSource().sendSystemMessage(Component.literal(
+                    "  成功率: " + String.format("%.1f%%", successCount * 100.0 / total)
+                            + "  fallback率: " + String.format("%.1f%%", fallbackCount * 100.0 / total)));
+            ctx.getSource().sendSystemMessage(Component.literal(
+                    "  耗时 min/avg/max: " + minTime + " / " + avgTime + " / " + maxTime + " ms"));
+            ctx.getSource().sendSystemMessage(Component.literal(
+                    "  平均采样: " + avgSamples + "  最大半径: " + maxRadius));
+        }
+
+        return successCount > 0 ? 1 : 0;
     }
 
-    private static void printResult(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension,
-                                    ResolveResult result, com.proto781m.betterspawn.api.SearchTrace trace, boolean verbose) {
-        String statusColor = switch (result.status()) {
+    private static SpawnRule applyOverrides(SpawnRule base, Options options) throws CommandSyntaxException {
+        String method = options.method != null ? options.method : base.method();
+
+        Map<String, Object> params = new HashMap<>(base.parameters());
+        if (options.params != null) {
+            try {
+                JsonElement parsed = JsonParser.parseString(options.params);
+                if (!parsed.isJsonObject()) {
+                    throw new SimpleCommandExceptionType(
+                            Component.literal("--params 必须是 JSON 对象")).create();
+                }
+                params.putAll(SpawnTemplateLoader.parseParams(parsed.getAsJsonObject()));
+            } catch (CommandSyntaxException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new SimpleCommandExceptionType(
+                        Component.literal("--params JSON 解析失败: " + ex.getMessage())).create();
+            }
+        }
+
+        if (method.equals(base.method()) && options.params == null) {
+            return base;
+        }
+        return new SpawnRule(base.dimension(), method, params, base.fallback(), base.fallbackParameters());
+    }
+
+    private static void executeTeleport(CommandContext<CommandSourceStack> ctx, ServerLevel level,
+                                        ResolveResult result, boolean teleport, boolean verify) {
+        if (!teleport || !(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+
+        ServerLevel targetLevel = result.dimension() == null
+                ? level
+                : ctx.getSource().getServer().getLevel(result.dimension());
+        if (targetLevel == null) {
+            return;
+        }
+
+        BlockPos pos = result.pos();
+        TeleportHelper.teleport(player, targetLevel,
+                pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
+                result.angle(), player.getXRot());
+        ctx.getSource().sendSystemMessage(Component.literal("§a已传送到 " + pos
+                + " (" + targetLevel.dimension().location() + ")"));
+
+        if (verify) {
+            VerifyTaskManager.schedule(player, targetLevel, pos, 20);
+        }
+    }
+
+    private static void printResult(CommandContext<CommandSourceStack> ctx, ServerLevel level,
+                                    ResolveResult result, SearchTrace trace, boolean verbose) {
+        String color = switch (result.status()) {
             case OK -> "§a";
             case FALLBACK -> "§e";
             case TIMEOUT -> "§c";
             case UNSAFE -> "§6";
             default -> "§c";
         };
+
         ctx.getSource().sendSystemMessage(Component.literal(
-                "§e[BetterSpawn] 维度 " + dimension.location() + " 解析结果"));
+                "§e[BetterSpawn] 维度 " + level.dimension().location() + " 解析结果"));
         ctx.getSource().sendSystemMessage(Component.literal(
                 "  方法: " + result.usedMethod() + (result.fallbackUsed() ? " (fallback)" : "")));
         if (result.pos() != null) {
             ctx.getSource().sendSystemMessage(Component.literal(
-                    "  坐标: " + result.pos() + " [点击传送]".replace("[点击传送]", "")));
+                    "  坐标: " + result.pos() + "  §7y=" + result.pos().getY()));
+        } else {
+            ctx.getSource().sendSystemMessage(Component.literal("  坐标: 无"));
         }
         ctx.getSource().sendSystemMessage(Component.literal(
                 "  耗时: " + result.elapsedMillis() + " ms"));
         ctx.getSource().sendSystemMessage(Component.literal(
                 "  采样: " + result.samples() + "  最大半径: " + result.maxRadiusReached()));
         ctx.getSource().sendSystemMessage(Component.literal(
-                "  状态: " + statusColor + result.status()));
-        for (String w : result.warnings()) {
-            ctx.getSource().sendSystemMessage(Component.literal("  ⚠ " + w));
+                "  状态: " + color + result.status()));
+
+        for (String warning : result.warnings()) {
+            ctx.getSource().sendSystemMessage(Component.literal("  ⚠ " + warning));
         }
         if (verbose && trace != null && !trace.rings().isEmpty()) {
             ctx.getSource().sendSystemMessage(Component.literal("  详细轨迹:"));
-            for (var r : trace.rings()) {
+            for (SearchTrace.RingTrace ring : trace.rings()) {
                 ctx.getSource().sendSystemMessage(Component.literal(
-                        "    半径 " + r.radius() + ": 候选 " + r.candidates() + ", 接受 " + r.accepted()));
+                        "    半径 " + ring.radius() + ": 候选 " + ring.candidates()
+                                + ", 接受 " + ring.accepted()));
             }
         }
+
+        BetterSpawn.LOGGER.info("gotodim {} -> method={}, status={}, pos={}, elapsed={}ms, samples={}",
+                level.dimension().location(), result.usedMethod(), result.status(),
+                result.pos(), result.elapsedMillis(), result.samples());
     }
 
-    /** 选项容器，简化版。生产建议用完整的 brigadier 参数树。 */
-    private static class GotoDimOptions {
-        String mode;
-        String methodOverride;
-        String paramsOverride;
-        Long seedOverride;
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static final class Options {
+        String mode = "simulate";
+        String method;
+        String params;
+        Long seed;
         int repeat = 1;
         int timeoutTicks = 0;
-        boolean verbose = false;
-        boolean all = false;
+        boolean verbose;
+        boolean all;
 
-        // 用于累计的字段
-        long totalTime = 0;
-        int totalSamples = 0;
-        int successCount = 0;
-        int fallbackCount = 0;
-        ResolveResult lastResult = null;
-
-        GotoDimOptions(String mode) {
-            this.mode = mode;
+        Options copy() {
+            Options copy = new Options();
+            copy.mode = mode;
+            copy.method = method;
+            copy.params = params;
+            copy.seed = seed;
+            copy.repeat = repeat;
+            copy.timeoutTicks = timeoutTicks;
+            copy.verbose = verbose;
+            copy.all = all;
+            return copy;
         }
     }
 }

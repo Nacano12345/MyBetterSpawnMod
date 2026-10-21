@@ -6,8 +6,10 @@
     "max_y": 127,
     "center_x": 0,
     "center_z": 0,
-    "search_radius": 512,
-    "avoid_lava": true
+    "search_radius": 128,
+    "ring_step": 32,
+    "avoid_lava": true,
+    "max_chunk_loads": 64
   },
   "fallback": "platform",
   "fallback_parameters": {

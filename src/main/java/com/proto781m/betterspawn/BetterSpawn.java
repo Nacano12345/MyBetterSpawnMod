@@ -9,11 +9,11 @@ import com.proto781m.betterspawn.method.FloatingIslandSpawnMethod;
 import com.proto781m.betterspawn.method.PlatformSpawnMethod;
 import com.proto781m.betterspawn.method.TopSpawnMethod;
 import com.proto781m.betterspawn.method.WaterWorldSpawnMethod;
+import com.proto781m.betterspawn.template.SpawnTemplateManager;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 /**
@@ -33,21 +33,18 @@ public class BetterSpawn {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public BetterSpawn(IEventBus modEventBus, ModContainer modContainer) {
-        // 1. 注册配置
         modContainer.registerConfig(ModConfig.Type.COMMON, BetterSpawnConfig.SPEC);
 
-        // 2. 注册内置出生方法
         registerMethods();
+        // 保证内置模板在数据包 reload 之前就可读
+        SpawnTemplateManager.ensureLoaded();
 
-        // 3. 事件总线监听器已通过 @EventBusSubscriber 自动注册
-        //    （CommandRegistrationHandler、ReloadListenerHandler、ServerLifecycleHandler、
-        //     DimensionSpawnInitializer、BedAnchorHandler）
-
-        // 4. 标记模组加载完成
+        // 事件监听器通过 @EventBusSubscriber 自动注册：
+        // CommandRegistrationHandler / ReloadListenerHandler / DimensionSpawnInitializer /
+        // RespawnPositionHandler / PlayerSpawnSlotHandler / VerifyTaskManager
         LOGGER.info("BetterSpawn loaded (NeoForge 1.21)");
     }
 
-    /** 注册所有内置出生点计算方法。 */
     private void registerMethods() {
         SpawnMethodRegistry.register(new DefaultSpawnMethod());
         SpawnMethodRegistry.register(new TopSpawnMethod());

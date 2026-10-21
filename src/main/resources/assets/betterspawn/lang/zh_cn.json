@@ -1,11 +1,9 @@
 {
-  "itemGroup.betterspawn": "更好的出生点",
-  "block.betterspawn.example_block": "示例方块",
-  "item.betterspawn.example_item": "示例物品",
   "command.betterspawn.worldspawn.global.set": "已设置 %s 全局默认出生点: %s",
-  "command.betterspawn.worldspawn.player.set": "已设置 %s 在 %s 的个人世界出生点: %s",
   "command.betterspawn.worldspawn.global.clear": "已清除 %s 的全局默认出生点",
+  "command.betterspawn.worldspawn.player.set": "已设置 %s 在 %s 的个人世界出生点: %s",
   "command.betterspawn.worldspawn.player.clear": "已清除 %s 在 %s 的个人世界出生点",
+  "command.betterspawn.worldspawn.regenerate": "已重新解析 %s 的默认出生点: %s",
   "command.betterspawn.spawnpoint.set": "已设置 %s 的指令出生点: %s",
   "command.betterspawn.spawnpoint.bed": "已手动设置 %s 的床槽: %s",
   "command.betterspawn.spawnpoint.anchor": "已手动设置 %s 的锚槽: %s",
