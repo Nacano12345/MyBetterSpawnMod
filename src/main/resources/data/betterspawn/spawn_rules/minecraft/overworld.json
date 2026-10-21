@@ -1,0 +1,19 @@
+{
+  "dimension": "minecraft:overworld",
+  "method": "default",
+  "parameters": {
+    "center_x": 0,
+    "center_z": 0,
+    "max_radius": 2048,
+    "ring_step": 256,
+    "sample_step": 64
+  },
+  "fallback": "platform",
+  "fallback_parameters": {
+    "x": 0,
+    "y": 64,
+    "z": 0,
+    "size": 3,
+    "material": "minecraft:stone"
+  }
+}

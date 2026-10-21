@@ -1,0 +1,15 @@
+{
+  "itemGroup.betterspawn": "Better Spawn",
+  "block.betterspawn.example_block": "Example Block",
+  "item.betterspawn.example_item": "Example Item",
+  "command.betterspawn.worldspawn.global.set": "已设置 %s 全局默认出生点: %s",
+  "command.betterspawn.worldspawn.player.set": "已设置 %s 在 %s 的个人世界出生点: %s",
+  "command.betterspawn.worldspawn.global.clear": "已清除 %s 的全局默认出生点",
+  "command.betterspawn.worldspawn.player.clear": "已清除 %s 在 %s 的个人世界出生点",
+  "command.betterspawn.spawnpoint.set": "已设置 %s 的指令出生点: %s",
+  "command.betterspawn.spawnpoint.bed": "已手动设置 %s 的床槽: %s",
+  "command.betterspawn.spawnpoint.anchor": "已手动设置 %s 的锚槽: %s",
+  "command.betterspawn.spawnpoint.clear": "已清除 %s 的 %s 槽",
+  "command.betterspawn.gotodim.result": "[BetterSpawn] 维度 %s 解析结果\n  方法: %s%s\n  坐标: %s\n  耗时: %d ms\n  采样: %d  最大半径: %d\n  状态: %s",
+  "command.betterspawn.gotodim.verify": "[verify] 落地校验: %s"
+}

@@ -1,0 +1,19 @@
+{
+  "dimension": "minecraft:the_end",
+  "method": "fixed",
+  "parameters": {
+    "x": 100,
+    "y": 64,
+    "z": 0,
+    "angle": 90.0,
+    "safe_check": true
+  },
+  "fallback": "platform",
+  "fallback_parameters": {
+    "x": 100,
+    "y": 64,
+    "z": 0,
+    "size": 5,
+    "material": "minecraft:end_stone"
+  }
+}
