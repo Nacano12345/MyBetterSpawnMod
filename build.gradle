@@ -41,6 +41,10 @@ neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
 
+    // Optional: override the game directory, e.g. -PgameDir=/home/user/BetterSpawn-run
+    // Useful when the project itself lives on a FUSE/NTFS mount that has trouble with region writes.
+    def gameDir = providers.gradleProperty('gameDir').getOrElse('run')
+
     parchment {
         mappingsVersion = project.parchment_mappings_version
         minecraftVersion = project.parchment_minecraft_version
@@ -54,6 +58,7 @@ neoForge {
     runs {
         client {
             client()
+            gameDirectory = file(gameDir)
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
@@ -61,6 +66,7 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
+            gameDirectory = file(gameDir)
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
