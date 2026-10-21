@@ -64,7 +64,8 @@ public final class RespawnPositionHandler {
         // 保留原版的床/锚 NBT，这样床/锚槽在下次重生时仍能参与优先级判断
         event.setCopyOriginalSpawnPosition(true);
 
-        BetterSpawn.LOGGER.debug("Respawn {}: {} at {} in {}",
-                player.getScoreboardName(), result.usedMethod(), spawnPos, targetDimension.location());
+        BetterSpawn.LOGGER.info("Respawn {} in {} -> {} at {} in {}",
+                player.getScoreboardName(), deathDimension.location(), result.usedMethod(),
+                spawnPos, targetDimension.location());
     }
 }

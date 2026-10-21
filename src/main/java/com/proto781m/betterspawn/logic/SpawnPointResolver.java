@@ -1,5 +1,6 @@
 package com.proto781m.betterspawn.logic;
 
+import com.proto781m.betterspawn.BetterSpawn;
 import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SearchTrace;
 import com.proto781m.betterspawn.api.SpawnContext;
@@ -80,14 +81,21 @@ public final class SpawnPointResolver {
             SpawnPoint point = personal.get();
             ServerLevel level = server.getLevel(point.dimension());
             BlockPos safe = findSafe(level, point.pos());
+            BetterSpawn.LOGGER.info("Respawn chain {}: personal spawn {} -> safe {}",
+                    player.getScoreboardName(), point.pos(), safe);
             if (safe != null) {
                 return toResult(new SpawnPoint(safe, point.dimension(), point.angle()), "player_dimension_spawn");
             }
+        } else {
+            BetterSpawn.LOGGER.info("Respawn chain {}: no personal spawn for {}",
+                    player.getScoreboardName(), deathDimension.location());
         }
 
         // 死亡维度的全局默认出生点
         ResolveResult world = worldSpawnResult(server, deathDimension);
         if (world != null) {
+            BetterSpawn.LOGGER.info("Respawn chain {}: world spawn {} at {}",
+                    player.getScoreboardName(), deathDimension.location(), world.pos());
             return world;
         }
 

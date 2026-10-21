@@ -29,14 +29,36 @@ public final class PlayerSpawnData {
     /** 获取玩家的 BetterSpawn 根复合标签（不存在则创建并挂回玩家数据）。 */
     public static CompoundTag root(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
-        if (!persistent.contains(ROOT, Tag.TAG_COMPOUND)) {
-            persistent.put(ROOT, new CompoundTag());
+        CompoundTag persisted;
+        if (persistent.contains(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, Tag.TAG_COMPOUND)) {
+            persisted = persistent.getCompound(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
+        } else {
+            persisted = new CompoundTag();
+            persistent.put(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, persisted);
         }
-        return persistent.getCompound(ROOT);
+
+        if (!persisted.contains(ROOT, Tag.TAG_COMPOUND)) {
+            persisted.put(ROOT, new CompoundTag());
+        }
+        return persisted.getCompound(ROOT);
     }
 
+    /**
+     * 写回根标签。
+     *
+     * <p>必须放在 {@code PlayerPersisted} 里：{@code ServerPlayer#restoreFrom} 只复制
+     * 这个子标签到重生后的新玩家，直接放在 {@code NeoForgeData} 根上的数据会在死亡后丢失。
+     */
     private static void saveRoot(ServerPlayer player, CompoundTag root) {
-        player.getPersistentData().put(ROOT, root);
+        CompoundTag persistent = player.getPersistentData();
+        CompoundTag persisted;
+        if (persistent.contains(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, Tag.TAG_COMPOUND)) {
+            persisted = persistent.getCompound(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
+        } else {
+            persisted = new CompoundTag();
+            persistent.put(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, persisted);
+        }
+        persisted.put(ROOT, root);
     }
 
     // ------------------------------------------------------------------
@@ -94,6 +116,9 @@ public final class PlayerSpawnData {
         }
         root.put(KEY_DIM_SPAWNS, updated);
         saveRoot(player, root);
+        com.proto781m.betterspawn.BetterSpawn.LOGGER.info(
+                "Set personal world spawn for {} in {} at {} angle={}",
+                player.getScoreboardName(), dimension.location(), pos, angle);
     }
 
     public static void clearDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension) {

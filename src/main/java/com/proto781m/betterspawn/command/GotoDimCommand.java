@@ -379,7 +379,8 @@ public final class GotoDimCommand {
                 + " (" + targetLevel.dimension().location() + ")"));
 
         if (verify) {
-            VerifyTaskManager.schedule(player, targetLevel, pos, 20);
+            // 跨维度传送后客户端需要时间加载区块，等 3 秒再校验
+            VerifyTaskManager.schedule(player, targetLevel, pos, 60);
         }
     }
 
