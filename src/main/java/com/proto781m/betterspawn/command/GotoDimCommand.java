@@ -13,6 +13,7 @@ import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SearchTrace;
 import com.proto781m.betterspawn.api.SpawnMethodRegistry;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
+import com.proto781m.betterspawn.data.WorldSpawnData;
 import com.proto781m.betterspawn.logic.SpawnPointResolver;
 import com.proto781m.betterspawn.logic.VerifyTaskManager;
 import com.proto781m.betterspawn.template.SpawnRule;
@@ -26,6 +27,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.commands.CommandSourceStack;
@@ -50,6 +52,10 @@ import net.minecraft.world.level.Level;
  *
  * <p>所有参数都可省略：维度默认当前维度，模式默认 {@code simulate}。
  * {@code --method}/{@code --params} 会真正应用临时规则，不再像旧实现那样被忽略。
+ *
+ * <p>探测中心默认取该维度当前的全局出生点（Overworld 读 {@code level.dat}，
+ * 其他维度读 {@code WorldSpawnData}），因此 {@code worldspawn global} 修改后立即生效；
+ * 如需固定模板中心，用 {@code --params {"center_x":0,"center_z":0}} 显式覆盖。
  */
 public final class GotoDimCommand {
 
@@ -394,7 +400,7 @@ public final class GotoDimCommand {
                     level.dimension().location().toString()));
             return 0;
         }
-        SpawnRule rule = applyOverrides(base, options);
+        SpawnRule rule = applyOverrides(level, base, options);
 
         int total = Math.max(1, options.repeat);
         long totalTime = 0;
@@ -454,10 +460,12 @@ public final class GotoDimCommand {
         return successCount > 0 ? 1 : 0;
     }
 
-    private static SpawnRule applyOverrides(SpawnRule base, Options options) throws CommandSyntaxException {
+    private static SpawnRule applyOverrides(ServerLevel level, SpawnRule base, Options options)
+            throws CommandSyntaxException {
         String method = options.method != null ? options.method : base.method();
 
         Map<String, Object> params = new HashMap<>(base.parameters());
+        boolean centerSpecified = false;
         if (options.params != null) {
             try {
                 JsonElement parsed = JsonParser.parseString(options.params);
@@ -465,6 +473,8 @@ public final class GotoDimCommand {
                     throw new SimpleCommandExceptionType(
                             Component.translatable("betterspawn.msg.gotodim.params_object")).create();
                 }
+                centerSpecified = parsed.getAsJsonObject().has("center_x")
+                        || parsed.getAsJsonObject().has("center_z");
                 params.putAll(SpawnTemplateLoader.parseParams(parsed.getAsJsonObject()));
             } catch (CommandSyntaxException ex) {
                 throw ex;
@@ -474,10 +484,44 @@ public final class GotoDimCommand {
             }
         }
 
-        if (method.equals(base.method()) && options.params == null) {
+        // 默认从当前全局出生点开始探测，否则 worldspawn global 改完以后 gotodim 仍在旧中心搜索。
+        // --params 显式给出 center_x/center_z 时保留模板/调用者指定的中心。
+        Optional<BlockPos> probeCenter = centerSpecified
+                ? Optional.empty()
+                : currentProbeCenter(level);
+        probeCenter.ifPresent(center -> {
+            params.put("center_x", center.getX());
+            params.put("center_z", center.getZ());
+        });
+
+        // platform fallback 用 x/z 而不是 center_x/center_z；让它也跟随探测中心。
+        Map<String, Object> fallbackParams = base.fallbackParameters();
+        Object centerX = params.get("center_x");
+        Object centerZ = params.get("center_z");
+        if ("platform".equals(base.fallback())
+                && centerX instanceof Number x && centerZ instanceof Number z) {
+            fallbackParams = new HashMap<>(fallbackParams);
+            fallbackParams.put("x", x.intValue());
+            fallbackParams.put("z", z.intValue());
+        }
+
+        if (method.equals(base.method()) && options.params == null && probeCenter.isEmpty()) {
             return base;
         }
-        return new SpawnRule(base.dimension(), method, params, base.fallback(), base.fallbackParameters());
+        return new SpawnRule(base.dimension(), method, params, base.fallback(), fallbackParams);
+    }
+
+    /**
+     * 当前维度的探测中心：主世界以 level.dat 为准（vanilla /setworldspawn 也会更新），
+     * 其他维度读取 WorldSpawnData。
+     */
+    private static Optional<BlockPos> currentProbeCenter(ServerLevel level) {
+        if (level.dimension().equals(Level.OVERWORLD)) {
+            return Optional.of(level.getLevelData().getSpawnPos());
+        }
+        return WorldSpawnData.get(level.getServer())
+                .get(level.dimension())
+                .map(point -> point.pos());
     }
 
     private static void executeTeleport(CommandContext<CommandSourceStack> ctx, ServerLevel level,
