@@ -2,6 +2,7 @@
   "dimension": "minecraft:overworld",
   "method": "default",
   "parameters": {
+    "allow_position_overwrite": true,
     "center_x": 0,
     "center_z": 0,
     "max_radius": 256,

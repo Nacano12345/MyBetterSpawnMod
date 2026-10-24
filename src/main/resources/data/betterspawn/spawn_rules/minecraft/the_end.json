@@ -2,6 +2,7 @@
   "dimension": "minecraft:the_end",
   "method": "fixed",
   "parameters": {
+    "allow_position_overwrite": true,
     "x": 100,
     "y": 64,
     "z": 0,

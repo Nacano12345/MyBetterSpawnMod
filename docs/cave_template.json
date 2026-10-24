@@ -2,6 +2,7 @@
   "dimension": "your:no_sky_dimension",
   "method": "cave",
   "parameters": {
+    "allow_position_overwrite": true,
     "center_x": 0,
     "center_z": 0,
     "min_y": 32,

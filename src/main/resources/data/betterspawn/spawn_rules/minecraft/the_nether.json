@@ -2,6 +2,7 @@
   "dimension": "minecraft:the_nether",
   "method": "portal_type",
   "parameters": {
+    "allow_position_overwrite": true,
     "center_x": 0,
     "center_z": 0,
     "min_y": 32,

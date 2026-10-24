@@ -53,9 +53,12 @@ import net.minecraft.world.level.Level;
  * <p>所有参数都可省略：维度默认当前维度，模式默认 {@code simulate}。
  * {@code --method}/{@code --params} 会真正应用临时规则，不再像旧实现那样被忽略。
  *
- * <p>探测中心默认取该维度当前的全局出生点（Overworld 读 {@code level.dat}，
- * 其他维度读 {@code WorldSpawnData}），因此 {@code worldspawn global} 修改后立即生效；
- * 如需固定模板中心，用 {@code --params {"center_x":0,"center_z":0}} 显式覆盖。
+ * <p>模板在 {@code parameters} 中设置 {@code allow_position_overwrite=true} 后，
+ * 探测位置会取该维度当前的全局出生点（Overworld 读 {@code level.dat}，其他维度读
+ * {@code WorldSpawnData}），因此 {@code worldspawn global} 修改后立即生效；默认关闭。
+ * 搜索类方法覆盖 {@code center_x/center_z}，{@code fixed}/{@code platform} 覆盖坐标，
+ * {@code portal_type} 还会覆盖其平台兜底坐标。{@code --params} 显式给出位置参数时，
+ * 本次运行始终以调用者为准。
  */
 public final class GotoDimCommand {
 
@@ -465,7 +468,7 @@ public final class GotoDimCommand {
         String method = options.method != null ? options.method : base.method();
 
         Map<String, Object> params = new HashMap<>(base.parameters());
-        boolean centerSpecified = false;
+        boolean positionSpecified = false;
         if (options.params != null) {
             try {
                 JsonElement parsed = JsonParser.parseString(options.params);
@@ -473,9 +476,12 @@ public final class GotoDimCommand {
                     throw new SimpleCommandExceptionType(
                             Component.translatable("betterspawn.msg.gotodim.params_object")).create();
                 }
-                centerSpecified = parsed.getAsJsonObject().has("center_x")
-                        || parsed.getAsJsonObject().has("center_z");
-                params.putAll(SpawnTemplateLoader.parseParams(parsed.getAsJsonObject()));
+                var json = parsed.getAsJsonObject();
+                positionSpecified = json.has("center_x") || json.has("center_z")
+                        || json.has("x") || json.has("y") || json.has("z")
+                        || json.has("platform_x") || json.has("platform_y")
+                        || json.has("platform_z");
+                params.putAll(SpawnTemplateLoader.parseParams(json));
             } catch (CommandSyntaxException ex) {
                 throw ex;
             } catch (Exception ex) {
@@ -484,31 +490,58 @@ public final class GotoDimCommand {
             }
         }
 
-        // 默认从当前全局出生点开始探测，否则 worldspawn global 改完以后 gotodim 仍在旧中心搜索。
-        // --params 显式给出 center_x/center_z 时保留模板/调用者指定的中心。
-        Optional<BlockPos> probeCenter = centerSpecified
-                ? Optional.empty()
-                : currentProbeCenter(level);
-        probeCenter.ifPresent(center -> {
-            params.put("center_x", center.getX());
-            params.put("center_z", center.getZ());
-        });
+        // 只有模板显式允许时才用全局出生点覆盖探测位置，避免改变数据包原本的配置。
+        // --params 显式给出位置参数时始终保留调用者指定的位置。
+        boolean allowOverwrite = !positionSpecified
+                && Boolean.TRUE.equals(params.get("allow_position_overwrite"));
+        Optional<BlockPos> probeCenter = allowOverwrite
+                ? currentProbeCenter(level)
+                : Optional.empty();
+        probeCenter.ifPresent(center -> applyGlobalPosition(params, method, center));
 
-        // platform fallback 用 x/z 而不是 center_x/center_z；让它也跟随探测中心。
         Map<String, Object> fallbackParams = base.fallbackParameters();
-        Object centerX = params.get("center_x");
-        Object centerZ = params.get("center_z");
-        if ("platform".equals(base.fallback())
-                && centerX instanceof Number x && centerZ instanceof Number z) {
+        if (probeCenter.isPresent() && "platform".equals(base.fallback())) {
+            BlockPos center = probeCenter.get();
             fallbackParams = new HashMap<>(fallbackParams);
-            fallbackParams.put("x", x.intValue());
-            fallbackParams.put("z", z.intValue());
+            fallbackParams.put("x", center.getX());
+            fallbackParams.put("y", center.getY() - 1);
+            fallbackParams.put("z", center.getZ());
         }
 
         if (method.equals(base.method()) && options.params == null && probeCenter.isEmpty()) {
             return base;
         }
         return new SpawnRule(base.dimension(), method, params, base.fallback(), fallbackParams);
+    }
+
+    /**
+     * 按方法类型把全局出生点写进对应位置参数。
+     * 全局出生点记录的是脚部位置；platform 的 y 是平台方块中心，所以需要减一。
+     */
+    private static void applyGlobalPosition(Map<String, Object> params, String method, BlockPos center) {
+        switch (method) {
+            case "fixed" -> {
+                params.put("x", center.getX());
+                params.put("y", center.getY());
+                params.put("z", center.getZ());
+            }
+            case "platform" -> {
+                params.put("x", center.getX());
+                params.put("y", center.getY() - 1);
+                params.put("z", center.getZ());
+            }
+            case "portal_type" -> {
+                params.put("center_x", center.getX());
+                params.put("center_z", center.getZ());
+                params.put("platform_x", center.getX());
+                params.put("platform_y", center.getY() - 1);
+                params.put("platform_z", center.getZ());
+            }
+            default -> {
+                params.put("center_x", center.getX());
+                params.put("center_z", center.getZ());
+            }
+        }
     }
 
     /**
