@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logos/betterspawn-banner.png" alt="Proto781M's Better Spawn" width="720">
+</p>
+
 # Proto781M's Better Spawn
 
 **Proto781M's Better Spawn** is a NeoForge 1.21 mod that replaces the vanilla spawn
@@ -37,6 +41,13 @@ kept in the **[Wiki](https://github.com/Nacano12345/MyBetterSpawnMod/wiki)**:
 
 Source is available and builds as `betterspawn-1.0.0.jar`. Some features are experimental;
 see the Wiki for details and limitations.
+
+## Logos
+
+- [Transparent logo](docs/logos/betterspawn-transparent.png)
+- [Wide banner](docs/logos/betterspawn-banner.png)
+- [Dirt background](docs/logos/betterspawn-dirt.png)
+- [Sky background](docs/logos/betterspawn-sky.png)
 
 ## License
 
