@@ -12,25 +12,28 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 
 /**
- * 模板管理器：缓存所有已加载的 {@link SpawnRule}，支持运行时 reload。
+ * Template manager: caches all loaded {@link SpawnRule} instances and supports runtime
+ * reloads.
  *
- * <p>资源路径约定：{@code data/<namespace>/spawn_rules/...} 下的 JSON 文件。
- * 数据包规则按 JSON 里的 {@code dimension} 字段索引，并覆盖同名内置模板。
+ * <p>Resources live in JSON files under {@code data/<namespace>/spawn_rules/...}.
+ * Datapack rules are indexed by their {@code dimension} field and override built-in
+ * templates for the same dimension.
  *
- * <p>内置模板在类加载时就放进规则表，因此即使服务器还没完成数据包 reload，
- * {@link #get(ResourceLocation)} 也不会返回空——这是早期版本在
- * {@code ServerAboutToStartEvent} 阶段全部回退到平台方法的另一个原因。
+ * <p>Built-in templates are installed when the class loads, so
+ * {@link #get(ResourceLocation)} never returns empty before the server finishes a
+ * datapack reload. Missing built-ins were another cause of the early platform fallback
+ * during {@code ServerAboutToStartEvent}.
  *
- * <p>规则表使用 {@code volatile} 整体替换，避免客户端/服务端 reload 线程与解析线程
- * 同时读写同一个 HashMap。
+ * <p>The rule table is replaced as a whole through a {@code volatile} reference, so
+ * reload and resolution threads never share a mutable HashMap.
  */
 public final class SpawnTemplateManager {
 
-    /** 内置原版三个维度的默认模板（兜底，数据包可覆盖）。 */
+    /** Built-in default templates for the three vanilla dimensions; datapacks may override them. */
     private static final Map<ResourceLocation, SpawnRule> BUILTIN_DEFAULTS =
             Map.copyOf(createBuiltinDefaults());
 
-    /** 当前生效的规则：内置 + 数据包覆盖。整体替换，保证读线程安全。 */
+    /** Currently active rules: built-ins plus datapack overrides. Replaced atomically for safe reads. */
     private static volatile Map<ResourceLocation, SpawnRule> rules = BUILTIN_DEFAULTS;
 
     private SpawnTemplateManager() {
@@ -39,7 +42,7 @@ public final class SpawnTemplateManager {
     private static Map<ResourceLocation, SpawnRule> createBuiltinDefaults() {
         Map<ResourceLocation, SpawnRule> defaults = new HashMap<>();
 
-        // 主世界：default 方法
+        // Overworld: default method
         defaults.put(ResourceLocation.parse("minecraft:overworld"), new SpawnRule(
                 ResourceLocation.parse("minecraft:overworld"),
                 "default",
@@ -57,7 +60,7 @@ public final class SpawnTemplateManager {
                 )
         ));
 
-        // 地狱：portal_type 方法（寻找可建传送门的位置，失败则生成平台）
+        // Nether: portal_type method (find a portal site; build a platform on failure)
         defaults.put(ResourceLocation.parse("minecraft:the_nether"), new SpawnRule(
                 ResourceLocation.parse("minecraft:the_nether"),
                 "portal_type",
@@ -86,7 +89,7 @@ public final class SpawnTemplateManager {
                 )
         ));
 
-        // 末地：fixed 方法（主岛外的定点坐标，由平台方法保底搭台）
+        // End: fixed method (a fixed point outside the main island, with a platform fallback)
         defaults.put(ResourceLocation.parse("minecraft:the_end"), new SpawnRule(
                 ResourceLocation.parse("minecraft:the_end"),
                 "fixed",
@@ -107,7 +110,8 @@ public final class SpawnTemplateManager {
     }
 
     /**
-     * 由 reload listener 调用：整体替换规则表。数据包规则覆盖内置规则。
+     * Called by the reload listener: replaces the whole rule table. Datapack rules take
+     * precedence over built-ins.
      */
     public static void reload(Map<ResourceLocation, JsonElement> data) {
         Map<ResourceLocation, SpawnRule> parsed = new HashMap<>(BUILTIN_DEFAULTS);
@@ -126,7 +130,7 @@ public final class SpawnTemplateManager {
                 rules.size(), fromPack, BUILTIN_DEFAULTS.size());
     }
 
-    /** 确保内置模板已就位（正常情况类加载时已完成，这里只做防御）。 */
+    /** Ensures built-in templates are installed; normally this already happened at class load. */
     public static void ensureLoaded() {
         if (rules.isEmpty()) {
             rules = BUILTIN_DEFAULTS;

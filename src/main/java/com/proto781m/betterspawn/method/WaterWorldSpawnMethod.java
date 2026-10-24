@@ -15,19 +15,21 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 
 /**
- * 水世界方法：把水/岩浆等流体视为“空气”，只寻找非流体的固体方块。
+ * Water-world method: treats water, lava, and other fluids as "air" and looks only
+ * for non-fluid solid blocks.
  *
- * <p>搜索时优先返回干燥的落脚点；只有在找不到干燥位置、且
- * {@code allow_submerged=true} 时，才会返回水下/液体中的固体地面。
- * 这样既能服务海洋世界，也不会在普通世界里把玩家优先丢进海里。
+ * <p>Dry landing spots are preferred. Only when no dry position exists and
+ * {@code allow_submerged=true} does it return solid ground underwater or inside
+ * another fluid. This supports ocean worlds without dropping players into the sea in
+ * normal worlds by default.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
- *   <li>{@code max_radius}：最大半径，默认 2048</li>
- *   <li>{@code ring_step}：环带步长，默认 64</li>
- *   <li>{@code allow_submerged}：是否允许水下落脚，默认 true</li>
- *   <li>{@code max_chunk_loads}：本次最多生成多少个区块</li>
+ *   <li>{@code center_x}, {@code center_z}: search center; defaults to 0,0</li>
+ *   <li>{@code max_radius}: maximum radius; defaults to 2048</li>
+ *   <li>{@code ring_step}: ring step; defaults to 64</li>
+ *   <li>{@code allow_submerged}: whether underwater landing spots are allowed; defaults to true</li>
+ *   <li>{@code max_chunk_loads}: maximum chunks generated during this search</li>
  * </ul>
  */
 public class WaterWorldSpawnMethod implements SpawnMethod {
@@ -95,7 +97,7 @@ public class WaterWorldSpawnMethod implements SpawnMethod {
                         List.of("Search timed out"));
             }
             if (scanner.budgetExhausted()) {
-                // 预算用尽时，如果已经找到水下候选点，就返回它
+                // When the budget is exhausted, return the underwater candidate if one was already found.
                 if (submerged != null) {
                     return result(level, dimension, submerged, angle, scanner, submergedRadius,
                             List.of("Chunk budget reached; returning the submerged/liquid candidate"));

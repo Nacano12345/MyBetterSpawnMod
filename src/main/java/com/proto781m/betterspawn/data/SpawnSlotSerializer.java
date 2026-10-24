@@ -6,9 +6,9 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /**
- * {@link SpawnSlot} 的 NBT 序列化工具。
+ * NBT serialization helper for {@link SpawnSlot}.
  *
- * <p>NBT 结构：
+ * <p>NBT structure:
  * <pre>
  * slot = {
  *   type: "COMMAND" | "BED" | "ANCHOR",
@@ -18,7 +18,8 @@ import net.minecraft.world.level.Level;
  * }
  * </pre>
  *
- * <p>{@code valid} 是运行时校验结果，不持久化（每次重生前重新校验）。
+ * <p>{@code valid} is a runtime validation result and is not persisted; it is
+ * recalculated before each respawn.
  */
 public final class SpawnSlotSerializer {
 

@@ -30,9 +30,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * {@code /betterspawn worldspawn} 子命令（setworldspawn 的扩展版）。
+ * {@code /betterspawn worldspawn} subcommands (an extended {@code setworldspawn}).
  *
- * <p>参数可省略：维度默认当前维度，坐标默认玩家脚部位置，角度默认当前朝向。
+ * <p>Arguments may be omitted: the dimension defaults to the current dimension, the
+ * position defaults to the player's feet, and the angle defaults to the current yaw.
  *
  * <pre>
  * /betterspawn worldspawn global [&lt;pos&gt; | &lt;dimension&gt;] [&lt;pos&gt;] [&lt;angle&gt;]
@@ -111,7 +112,7 @@ public final class SetWorldSpawnCommand {
                 .then(argumentDimension("dimension")
                         .executes(ctx -> execRegenerate(ctx, dimension(ctx, "dimension")))));
 
-        // spawn_dimension [dimension] —— 实验性：新玩家首次进服的目标维度
+        // spawn_dimension [dimension] -- experimental: target dimension for a new player's first join
         root.then(Commands.literal("spawn_dimension")
                 .executes(ctx -> execQuerySpawnDimension(ctx))
                 .then(argumentDimension("dimension")
@@ -132,7 +133,7 @@ public final class SetWorldSpawnCommand {
             return 1;
         }));
 
-        // reload（触发一次完整数据包 reload）
+        // reload (triggers a full datapack reload)
         root.then(Commands.literal("reload").executes(ctx -> {
             MinecraftServer server = ctx.getSource().getServer();
             server.reloadResources(server.getPackRepository().getSelectedIds());
@@ -144,7 +145,7 @@ public final class SetWorldSpawnCommand {
     }
 
     // ------------------------------------------------------------------
-    // 参数辅助
+    // Argument helpers
     // ------------------------------------------------------------------
 
     private static RequiredArgumentBuilder<CommandSourceStack, ResourceKey<Level>> argumentDimension(String name) {
@@ -192,7 +193,7 @@ public final class SetWorldSpawnCommand {
     }
 
     // ------------------------------------------------------------------
-    // 执行
+    // Execution
     // ------------------------------------------------------------------
 
     private static int execGlobal(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension,
@@ -261,7 +262,7 @@ public final class SetWorldSpawnCommand {
         ServerLevel level = server.getLevel(dimension);
         var entry = WorldSpawnData.get(server).get(dimension);
 
-        // 主世界的 level.dat 是最终权威（/setworldspawn 直接写这里），查询时以它为准
+        // level.dat is authoritative for the Overworld (/setworldspawn writes there); queries use it.
         BlockPos pos;
         float angle;
         if (dimension.equals(Level.OVERWORLD) && level != null) {

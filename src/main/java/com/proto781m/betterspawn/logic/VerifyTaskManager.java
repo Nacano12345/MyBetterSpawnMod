@@ -15,10 +15,11 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /**
- * {@code /gotodim verify} 的延迟校验任务。
+ * Delayed verification task for {@code /gotodim verify}.
  *
- * <p>传送后等待约 3 秒，检查玩家是否落地、是否在液体/虚空中、是否偏离目标点。
- * 不使用 {@code Thread.sleep}，避免阻塞服务器线程。
+ * <p>After teleporting, waits about 3 seconds and checks whether the player landed,
+ * is in liquid or the void, or drifted from the target. It does not use
+ * {@code Thread.sleep}, so it never blocks the server thread.
  */
 @EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class VerifyTaskManager {
@@ -81,7 +82,7 @@ public final class VerifyTaskManager {
         boolean inLiquid = player.isInFluidType();
         boolean inVoid = player.getY() < level.getMinBuildHeight() + 1;
         boolean atTarget = Math.abs(player.getY() - expected.getY()) <= 1.5;
-        // 跨维度传送后 onGround 标志可能延迟；脚下有实体方块且高度正确也算成功
+        // After a cross-dimension teleport, the onGround flag may lag; solid ground below with the correct height also counts as success.
         boolean onGround = player.onGround() || (solidGround && atTarget);
         double distance = player.position().distanceTo(Vec3.atBottomCenterOf(expected));
 

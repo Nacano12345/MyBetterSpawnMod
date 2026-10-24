@@ -9,14 +9,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 平台生成器：在指定坐标搭建一个平台，并清理上方空间。
+ * Platform builder: creates a platform at the given coordinates and clears space above it.
  */
 public final class PlatformBuilder {
 
     private PlatformBuilder() {
     }
 
-    /** 解析方块 id；无效或空气时回退到石头。 */
+    /** Resolves a block ID, falling back to stone for invalid IDs or air. */
     public static BlockState resolveState(String materialId) {
         try {
             Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(materialId));
@@ -29,18 +29,18 @@ public final class PlatformBuilder {
         }
     }
 
-    /** 在 {@code center} 处搭建平台，默认清理上方 2 格。 */
+    /** Builds a platform at {@code center}, clearing two blocks above by default. */
     public static void build(ServerLevel level, BlockPos center, int size, BlockState state) {
         build(level, center, size, state, 2);
     }
 
     /**
-     * 在 {@code center} 处搭建平台，并清理上方 {@code clearHeight} 格。
+     * Builds a platform at {@code center} and clears {@code clearHeight} blocks above it.
      *
-     * @param center      平台中心地面层
-     * @param size        平台边长（建议奇数）
-     * @param state       平台方块
-     * @param clearHeight 平台上方需要保留的空气高度
+     * @param center      platform center ground layer
+     * @param size        platform side length (odd values are recommended)
+     * @param state       platform block
+     * @param clearHeight air height to keep above the platform
      */
     public static void build(ServerLevel level, BlockPos center, int size, BlockState state, int clearHeight) {
         int half = size / 2;
@@ -50,7 +50,7 @@ public final class PlatformBuilder {
             }
         }
 
-        // 清理平台上方的遮挡物，保证玩家/传送门有足够净空
+        // Clear obstructions above the platform so players/portals have enough headroom.
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
                 for (int dy = 1; dy <= clearHeight; dy++) {

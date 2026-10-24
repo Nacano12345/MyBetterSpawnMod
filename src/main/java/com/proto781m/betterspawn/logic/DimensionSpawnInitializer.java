@@ -22,19 +22,21 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 /**
- * 维度默认出生点初始化。
+ * Initializes per-dimension default spawn points.
  *
- * <p>时机非常关键（早期版本就是在这里踩坑的）：
+ * <p>Timing is critical:
  * <ul>
- *   <li>{@link LevelEvent.CreateSpawnPosition}：新世界创建时、原版挑选出生点之前触发。
- *       这里解析并取消原版逻辑，可以把模板结果直接写进 {@code level.dat}，
- *       同时让 {@code prepareLevels} 在正确的出生点周围加载出生区块。</li>
- *   <li>{@link ServerStartedEvent}：所有维度已创建、出生区块已准备、玩家尚未登录时触发。
- *       这里补齐旧存档/其他维度缺失的默认出生点。</li>
+ *   <li>{@link LevelEvent.CreateSpawnPosition}: fires when a new world is created and
+ *       before vanilla chooses a spawn. Resolve the template and cancel vanilla logic
+ *       so the result can be written to {@code level.dat} and {@code prepareLevels}
+ *       loads spawn chunks around the correct position.</li>
+ *   <li>{@link ServerStartedEvent}: all dimensions exist, spawn chunks are ready, and
+ *       no players have joined. Fill in missing spawns for old saves or other dimensions.</li>
  * </ul>
  *
- * <p><b>不要</b>在 {@code LevelEvent.Load} 或 {@code ServerAboutToStartEvent} 里搜索：
- * 此时区块还没加载，{@code getHeight} 会返回 {@code minBuildHeight}，看起来像虚空世界。
+ * <p><b>Do not</b> search during {@code LevelEvent.Load} or
+ * {@code ServerAboutToStartEvent}: chunks are not loaded yet and {@code getHeight}
+ * returns {@code minBuildHeight}, making the world look empty.
  */
 @EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class DimensionSpawnInitializer {
@@ -80,7 +82,8 @@ public final class DimensionSpawnInitializer {
         initAll(event.getServer());
     }
 
-    /** 补齐所有维度缺失的默认出生点；旧存档数据版本不匹配时重新解析。 */
+    /** Fills in missing default spawns for all dimensions and re-resolves old save data
+     * when its version does not match. */
     public static void initAll(MinecraftServer server) {
         SpawnTemplateManager.ensureLoaded();
         WorldSpawnData data = WorldSpawnData.get(server);
@@ -89,8 +92,8 @@ public final class DimensionSpawnInitializer {
         boolean preserveOverworld = false;
 
         if (migrating) {
-            // 旧版本可能把错误的平台点写进数据。若主世界 level.dat 的出生点与旧数据不同，
-            // 说明管理员后来用过 /setworldspawn，迁移时保留 level.dat 的选择。
+            // Older versions may have stored an incorrect platform point. If the Overworld level.dat spawn differs from the stored value,
+            // an admin used /setworldspawn later; preserve the level.dat choice during migration.
             Optional<SpawnPoint> legacy = data.get(Level.OVERWORLD);
             if (legacy.isPresent()) {
                 BlockPos vanilla = server.overworld().getLevelData().getSpawnPos();
@@ -152,7 +155,7 @@ public final class DimensionSpawnInitializer {
             return;
         }
 
-        // 旧存档迁移时已经清空，不需要同步；正常启动时让 /setworldspawn 对主世界生效
+        // Migration already cleared old data, so no sync is needed; on normal startup, let /setworldspawn affect the Overworld.
         if (!migrating && dimension.equals(Level.OVERWORLD)) {
             BlockPos vanillaPos = level.getLevelData().getSpawnPos();
             float vanillaAngle = level.getLevelData().getSpawnAngle();
@@ -165,7 +168,8 @@ public final class DimensionSpawnInitializer {
     }
 
     /**
-     * 重新解析某个维度的默认出生点（命令 {@code /betterspawn worldspawn regenerate} 使用）。
+     * Re-resolves the default spawn for one dimension
+     * (used by {@code /betterspawn worldspawn regenerate}).
      */
     public static boolean regenerate(MinecraftServer server, ResourceKey<Level> dimension) {
         ServerLevel level = server.getLevel(dimension);

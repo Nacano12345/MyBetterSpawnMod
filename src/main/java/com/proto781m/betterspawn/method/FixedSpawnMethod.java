@@ -13,13 +13,14 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 
 /**
- * 定点坐标方法（末地）：直接使用 JSON 指定的 {@code x, y, z}。
+ * Fixed-position method (End): uses the {@code x}, {@code y}, and {@code z} values
+ * from the JSON template.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code x}, {@code y}, {@code z}：目标脚部坐标</li>
- *   <li>{@code angle}：朝向角度，默认随机</li>
- *   <li>{@code safe_check}：是否做安全校验，默认 true；不通过则交给 fallback</li>
+ *   <li>{@code x}, {@code y}, {@code z}: target feet position</li>
+ *   <li>{@code angle}: facing angle; random by default</li>
+ *   <li>{@code safe_check}: whether to validate safety; defaults to true and falls back on failure</li>
  * </ul>
  */
 public class FixedSpawnMethod implements SpawnMethod {

@@ -4,13 +4,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 出生方法注册表。
+ * Registry of spawn methods.
  *
- * <p>框架内置方法在 {@code BetterSpawn#registerMethods} 中注册；
- * 其他模组可通过 {@link #register(SpawnMethod)} 注册自定义方法（建议在自己模组的
- * 构造阶段调用）。
+ * <p>Built-in methods are registered in {@code BetterSpawn#registerMethods}. Other mods
+ * may register custom methods with {@link #register(SpawnMethod)}, preferably during
+ * their own mod construction.
  *
- * <p>注意：本注册表是进程内静态的，跨存档共享，符合“方法”这种无状态实现的语义。
+ * <p>The registry is process-wide and shared across worlds, which suits stateless
+ * method implementations.
  */
 public final class SpawnMethodRegistry {
 
@@ -19,12 +20,12 @@ public final class SpawnMethodRegistry {
     private SpawnMethodRegistry() {
     }
 
-    /** 注册一个方法，id 重复时后者覆盖前者。 */
+    /** Registers a method. A later registration with the same ID replaces the earlier one. */
     public static void register(SpawnMethod method) {
         METHODS.put(method.id(), method);
     }
 
-    /** 按 id 获取方法，不存在返回 {@code null}。 */
+    /** Returns the method with the given ID, or {@code null} if it does not exist. */
     public static SpawnMethod get(String id) {
         return METHODS.get(id);
     }

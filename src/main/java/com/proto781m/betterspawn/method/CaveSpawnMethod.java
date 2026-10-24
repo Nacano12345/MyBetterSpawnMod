@@ -18,29 +18,31 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
 /**
- * 洞穴方法：不依赖天空/高度图，直接扫描“有地面 + 有低矮岩顶”的地下空腔。
+ * Cave method: scans for underground pockets with a floor and a low ceiling without
+ * relying on the sky or heightmap.
  *
- * <p>这使它可以用于地狱、末地或任何没有天空的维度，也可以用于主世界的地下洞穴。
- * 判定一个位置是可用洞穴：
+ * <p>This works in the Nether, the End, or any dimension without a sky, as well as in
+ * Overworld caves. A position is a valid cave when:
  * <ul>
- *   <li>脚下是实体、非流体方块；</li>
- *   <li>脚部/头部可站立，且上方至少有 {@code min_air_height} 格非流体空气；</li>
- *   <li>在 {@code roof_scan} 格以内能碰到实体方块作为“岩顶”；</li>
- *   <li>岩顶以下到脚部之间没有液体。</li>
+ *   <li>the block below is solid and not a fluid;</li>
+ *   <li>the feet and head can stand, with at least {@code min_air_height} non-fluid air blocks above;</li>
+ *   <li>a solid block is found within {@code roof_scan} blocks above as a ceiling;</li>
+ *   <li>there is no liquid between the ceiling and the feet.</li>
  * </ul>
  *
- * <p>如果上方一直开阔到扫描上限都没有岩顶，就认为这是地表/开放空间，跳过。
+ * <p>If no ceiling is found within the scan limit, the position is treated as surface
+ * or open space and skipped.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
- *   <li>{@code min_y}, {@code max_y}：垂直扫描范围</li>
- *   <li>{@code search_radius}：水平搜索半径，默认 128</li>
- *   <li>{@code ring_step}：环带步长，默认 32</li>
- *   <li>{@code min_air_height}：脚部上方最少空气高度，默认 2</li>
- *   <li>{@code roof_scan}：向上最多找多少格岩顶，默认 8</li>
- *   <li>{@code avoid_lava}：是否避开岩浆，默认 true</li>
- *   <li>{@code max_chunk_loads}：本次最多加载多少个区块</li>
+ *   <li>{@code center_x}, {@code center_z}: search center; defaults to 0,0</li>
+ *   <li>{@code min_y}, {@code max_y}: vertical scan range</li>
+ *   <li>{@code search_radius}: horizontal search radius; defaults to 128</li>
+ *   <li>{@code ring_step}: ring step; defaults to 32</li>
+ *   <li>{@code min_air_height}: minimum air height above the feet; defaults to 2</li>
+ *   <li>{@code roof_scan}: maximum blocks to scan upward for a ceiling; defaults to 8</li>
+ *   <li>{@code avoid_lava}: whether to avoid lava; defaults to true</li>
+ *   <li>{@code max_chunk_loads}: maximum chunks loaded during this search</li>
  * </ul>
  */
 public class CaveSpawnMethod implements SpawnMethod {
@@ -76,7 +78,7 @@ public class CaveSpawnMethod implements SpawnMethod {
         int samples = 0;
         int radiusReached = 0;
 
-        // 1. 中心点
+        // 1. Center point
         samples++;
         CaveSite center = findCave(level, scanner, centerX, centerZ, minY, maxY,
                 minAirHeight, roofScan, avoidLava);
@@ -85,7 +87,7 @@ public class CaveSpawnMethod implements SpawnMethod {
             return result(level, dimension, center, angle, samples, 0);
         }
 
-        // 2. 同心环带
+        // 2. Concentric rings
         for (int radius = ringStep; radius <= searchRadius; radius += ringStep) {
             radiusReached = radius;
             int count = clamp(radius / 16, 8, 32);
@@ -126,9 +128,8 @@ public class CaveSpawnMethod implements SpawnMethod {
     private record CaveSite(BlockPos feet, int airHeight, int roofY) {
     }
 
-    /**
-     * 在一列中从高到低寻找洞穴。找到的第一个满足“有地面、有净空、上方有岩顶”的位置即返回。
-     */
+    /** Scans one column from top to bottom for a cave. Returns the first position with a
+     * floor, clearance, and a ceiling. */
     private CaveSite findCave(ServerLevel level, TerrainScanner scanner, int x, int z,
                               int minY, int maxY, int minAirHeight, int roofScan,
                               boolean avoidLava) {
@@ -163,7 +164,7 @@ public class CaveSpawnMethod implements SpawnMethod {
                 if (SafePosFinder.isPassable(state)) {
                     air++;
                 } else {
-                    break; // 碰到岩顶
+                    break; // Reached the ceiling
                 }
             }
 
@@ -171,7 +172,7 @@ public class CaveSpawnMethod implements SpawnMethod {
                 continue;
             }
 
-            // 确认 air 位置确实是实体方块（而不是被 roofScan 截断）
+            // Confirm the air position is actually a solid block rather than a roofScan cutoff.
             BlockState roof = level.getBlockState(feet.above(air));
             if (roof.getFluidState().isEmpty() && !SafePosFinder.isPassable(roof)) {
                 return new CaveSite(feet, air, feet.getY() + air);

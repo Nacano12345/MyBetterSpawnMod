@@ -7,16 +7,18 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 
 /**
- * 单个维度的出生点规则（来自 {@code data/betterspawn/spawn_rules/&lt;dim&gt;.json}）。
+ * Spawn rule for one dimension, loaded from
+ * {@code data/betterspawn/spawn_rules/&lt;dim&gt;.json}.
  *
- * <p>{@code parameters} / {@code fallbackParameters} 是 JSON 中对应对象的扁平键值，
- * 值统一转成 Java 基本类型（Integer/Long/Double/Boolean/String），用 typed getter 读取。
+ * <p>{@code parameters} and {@code fallbackParameters} contain the flattened key/value
+ * pairs from the corresponding JSON objects. Values are converted to Java primitives
+ * (Integer/Long/Double/Boolean/String) and read through typed getters.
  *
- * @param dimension          维度 id
- * @param method             主方法 id
- * @param parameters         主方法参数
- * @param fallback           回退方法 id（可为 null）
- * @param fallbackParameters 回退方法参数
+ * @param dimension          dimension ID
+ * @param method             main method ID
+ * @param parameters         main method parameters
+ * @param fallback           fallback method ID; may be {@code null}
+ * @param fallbackParameters fallback method parameters
  */
 public record SpawnRule(
         ResourceLocation dimension,
@@ -26,7 +28,7 @@ public record SpawnRule(
         Map<String, Object> fallbackParameters
 ) {
 
-    /** 将 dimension 转换为 ResourceKey<Level>，供解析器使用。 */
+    /** Converts the dimension ID to a {@code ResourceKey<Level>} for the resolver. */
     public ResourceKey<Level> dimensionKey() {
         return ResourceKey.create(Registries.DIMENSION, dimension);
     }

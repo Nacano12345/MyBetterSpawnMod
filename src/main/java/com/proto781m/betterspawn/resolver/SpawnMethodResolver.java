@@ -12,16 +12,18 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 出生方法调度器 + fallback 链。
+ * Spawn-method dispatcher and fallback chain.
  *
- * <p>职责：
+ * <p>Responsibilities:
  * <ol>
- *   <li>按 {@code rule.method()} 调用具体实现；</li>
- *   <li>记录耗时，捕获实现抛出的异常（避免一个方法出错拖垮整个解析）；</li>
- *   <li>主方法失败时按 {@code rule.fallback} 递归调用，并限制深度、防止成环。</li>
+ *   <li>Call the implementation named by {@code rule.method()};</li>
+ *   <li>Measure elapsed time and catch exceptions from implementations so one failure
+ *       does not abort the whole resolution;</li>
+ *   <li>When the main method fails, recurse through {@code rule.fallback} with a depth
+ *       limit and cycle protection.</li>
  * </ol>
  *
- * <p>调度器本身不落库；由调用方决定是否持久化。
+ * <p>The dispatcher does not persist anything; the caller decides whether to store the result.
  */
 public final class SpawnMethodResolver {
 
@@ -77,7 +79,7 @@ public final class SpawnMethodResolver {
             return ResolveResult.empty(currentMethod, ResolveResult.Status.EMPTY);
         }
 
-        // fallback 使用 fallback_parameters；fallback 字段继续保留，以支持多级回退
+        // Fallbacks use fallback_parameters; the fallback field is retained to support multi-level fallback.
         SpawnRule fallbackRule = new SpawnRule(
                 ctx.rule().dimension(),
                 fallbackId,
@@ -96,7 +98,7 @@ public final class SpawnMethodResolver {
                     ResolveResult.Status.FALLBACK, result.warnings());
         }
 
-        // fallback 也失败：统一返回“无坐标”的失败结果，避免调用方把 UNSAFE 的 pos 当成成功
+        // The fallback also failed: return a positionless failure so callers do not treat an UNSAFE position as success.
         return new ResolveResult(null, ctx.rule().dimensionKey(), 0.0F, currentMethod,
                 false, result.elapsedMillis(), result.samples(), result.maxRadiusReached(),
                 result.status() == ResolveResult.Status.TIMEOUT

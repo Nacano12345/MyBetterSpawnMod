@@ -2,9 +2,7 @@ package com.proto781m.betterspawn.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-/**
- * BetterSpawn 全局配置（COMMON 类型，服务端权威）。
- */
+/** Global BetterSpawn configuration (COMMON type; server-authoritative). */
 public final class BetterSpawnConfig {
 
     private BetterSpawnConfig() {
@@ -27,40 +25,40 @@ public final class BetterSpawnConfig {
 
         b.push("general");
         RESPAWN_POLICY = b
-                .comment("重生优先级：COMMAND_OVER_BED = 指令出生点优先于床；BED_OVER_COMMAND = 床/锚优先。")
+                .comment("Respawn priority: COMMAND_OVER_BED = command spawn before bed; BED_OVER_COMMAND = bed/anchor first.")
                 .defineEnum("respawnPolicy", RespawnPolicy.COMMAND_OVER_BED);
         NO_PERSONAL_SPAWN = b
-                .comment("死亡维度连全局默认出生点都没有时的最后回退：BACK_TO_OVERWORLD = 回主世界；STAY_IN_DEATH_DIMENSION = 留在死亡维度/交还原版。")
+                .comment("Final fallback when the death dimension has no global spawn either: BACK_TO_OVERWORLD = return to the Overworld; STAY_IN_DEATH_DIMENSION = stay in the death dimension or use vanilla behavior.")
                 .defineEnum("noPersonalSpawnBehavior", NoPersonalSpawnBehavior.BACK_TO_OVERWORLD);
         SYNC_VANILLA_NBT = b
-                .comment("执行 /betterspawn spawnpoint set 时，是否同步写原版重生点 NBT，保证其他模组兼容。")
+                .comment("When running /betterspawn spawnpoint set, also write the vanilla respawn NBT for compatibility with other mods.")
                 .define("syncVanillaNbt", true);
         b.pop();
 
         b.push("search");
         FALLBACK_MAX_DEPTH = b
-                .comment("fallback 链最大递归深度，防止方法互相回退造成死循环。")
+                .comment("Maximum recursion depth of the fallback chain, preventing infinite loops between methods.")
                 .defineInRange("fallbackMaxDepth", 3, 1, 10);
         SEARCH_TIMEOUT_TICKS = b
-                .comment("单次出生点解析的超时 tick 数。")
+                .comment("Timeout in ticks for one spawn-point resolution.")
                 .defineInRange("searchTimeoutTicks", 200, 1, 2000);
         MAX_CHUNK_LOADS = b
-                .comment("单次解析最多同步加载/生成多少个区块。数值过大会导致首次进服卡顿或存档 IO 压力。")
+                .comment("Maximum chunks loaded or generated synchronously per resolution. Large values can cause first-join lag or save I/O pressure.")
                 .defineInRange("maxChunkLoads", 64, 1, 8192);
         b.pop();
 
         b.push("debug");
         ENABLE_GOTODIM = b
-                .comment("是否启用 /gotodim 与 /betterspawn gotodim 测试指令。")
+                .comment("Enable the /gotodim and /betterspawn gotodim test commands.")
                 .define("enableGotoDim", true);
         ENABLE_DIAGNOSTIC_LOGS = b
-                .comment("输出详细诊断日志：重生选择链、个人出生点写入、命令解析、verify 结果等。默认关闭。")
+                .comment("Emit detailed diagnostic logs for the respawn chain, personal spawn writes, command parsing, verify results, and more. Disabled by default.")
                 .define("enableDiagnosticLogs", false);
         b.pop();
 
         b.push("experimental");
         ENABLE_SPAWN_DIMENSION_SELECTOR = b
-                .comment("实验性：在单人/局域网创建世界界面显示“出生维度”选择按钮。专用服务器不支持此界面。")
+                .comment("Experimental: show the Spawn Dimension button on the single-player/LAN create-world screen. Dedicated servers do not have this screen.")
                 .define("enableSpawnDimensionSelector", true);
         b.pop();
 

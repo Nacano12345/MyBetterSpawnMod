@@ -6,10 +6,10 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
 /**
- * 创建世界界面“更多”页的“出生维度”按钮工厂。
+ * Factory for the "Spawn Dimension" button on the create-world "More" tab.
  *
- * <p>按钮由 {@code CreateWorldScreenMoreTabMixin} 插入到 MoreTab 的布局中，
- * 位置在“游戏规则 / 实验性内容 / 数据包”三个按钮下方。
+ * <p>{@code CreateWorldScreenMoreTabMixin} inserts the button into the MoreTab layout,
+ * below the Game Rules, Experimental, and Data Packs buttons.
  */
 public final class CreateWorldSpawnDimensionButton {
 

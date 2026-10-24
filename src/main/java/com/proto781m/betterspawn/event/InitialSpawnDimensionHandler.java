@@ -18,11 +18,13 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 /**
- * 实验性“出生维度”功能：新玩家第一次进入世界时，传送到创建世界时选择的维度。
+ * Experimental "spawn dimension" feature: teleports a new player to the dimension
+ * selected during world creation when they first join.
  *
- * <p>原版新玩家总是在主世界登录，因此这里在登录后做一次跨维度传送，并用
- * {@link PlayerSpawnData} 中的标记保证只执行一次。只对单人/局域网主机有效，
- * 因为选择来自创建世界界面。
+ * <p>Vanilla always logs new players in at the Overworld, so this performs one
+ * cross-dimension teleport after login and uses a flag in {@link PlayerSpawnData} to
+ * run only once. It only applies to single-player or LAN hosts because the selection
+ * comes from the create-world screen.
  */
 @EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class InitialSpawnDimensionHandler {
@@ -52,7 +54,7 @@ public final class InitialSpawnDimensionHandler {
             return;
         }
 
-        // 只有真正的新玩家才传送；已有玩家保留自己的位置
+        // Teleport only genuinely new players; existing players keep their position.
         int playTime = player.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME);
         if (playTime > 0) {
             return;
@@ -73,7 +75,7 @@ public final class InitialSpawnDimensionHandler {
 
         PlayerSpawnData.setInitialDimensionApplied(player);
 
-        // 等一 tick，确保玩家已经完全加入世界再跨维度传送
+        // Wait one tick so the player has fully joined before the cross-dimension teleport.
         server.execute(() -> {
             if (player.hasDisconnected() || player.isRemoved() || !player.isAlive()) {
                 return;

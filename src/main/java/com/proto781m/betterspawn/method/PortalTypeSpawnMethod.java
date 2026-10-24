@@ -18,33 +18,34 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 传送门选址方法（地狱推荐）：寻找一个能放下传送门内部空间的安全位置。
+ * Portal-site method (recommended for the Nether): finds a safe position with enough
+ * interior space for a portal.
  *
- * <p>本方法只负责“选址”，不会实际放置黑曜石或点亮传送门。
+ * <p>This method only selects the site; it does not place obsidian or light the portal.
  *
- * <p>判定一个位置“可建传送门”需要：
+ * <p>A position is valid for a portal when:
  * <ul>
- *   <li>第一列（玩家实际站立列）脚下是实体、非流体方块；</li>
- *   <li>传送门内部（默认 2 宽 × 3 高）全部是空气/可替换方块，且没有液体；</li>
- *   <li>玩家自身脚部/头部安全。</li>
+ *   <li>the first column (where the player stands) has a solid, non-fluid block below;</li>
+ *   <li>the portal interior (2 wide by 3 high by default) is air or replaceable and contains no liquid;</li>
+ *   <li>the player's feet and head are safe.</li>
  * </ul>
  *
- * <p>找不到天然位置时，可由 {@code build_platform=true} 生成一个带净空的平台，
- * 平台上方会清理出足够建造传送门的空间。
+ * <p>If no natural site is found, {@code build_platform=true} creates a platform with
+ * enough cleared space above it for a portal.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
- *   <li>{@code min_y}, {@code max_y}：垂直搜索范围，默认 32..127</li>
- *   <li>{@code search_radius}：水平搜索半径，默认 128</li>
- *   <li>{@code ring_step}：环带步长，默认 32</li>
- *   <li>{@code portal_width}, {@code portal_height}：传送门内部尺寸，默认 2x3</li>
- *   <li>{@code avoid_lava}：是否避开岩浆，默认 true</li>
- *   <li>{@code build_platform}：找不到天然位置时是否生成平台，默认 true</li>
- *   <li>{@code platform_x/y/z}：平台中心地面坐标，默认搜索中心 + y=64</li>
- *   <li>{@code platform_size}：平台边长，默认 5（会自动调整为奇数）</li>
- *   <li>{@code platform_material}：平台方块，默认 {@code minecraft:netherrack}</li>
- *   <li>{@code max_chunk_loads}：本次最多加载多少个区块</li>
+ *   <li>{@code center_x}, {@code center_z}: search center; defaults to 0,0</li>
+ *   <li>{@code min_y}, {@code max_y}: vertical search range; defaults to 32..127</li>
+ *   <li>{@code search_radius}: horizontal search radius; defaults to 128</li>
+ *   <li>{@code ring_step}: ring step; defaults to 32</li>
+ *   <li>{@code portal_width}, {@code portal_height}: portal interior size; defaults to 2x3</li>
+ *   <li>{@code avoid_lava}: whether to avoid lava; defaults to true</li>
+ *   <li>{@code build_platform}: whether to build a platform when no natural site exists; defaults to true</li>
+ *   <li>{@code platform_x/y/z}: platform center ground coordinates; defaults to the search center with y=64</li>
+ *   <li>{@code platform_size}: platform side length; defaults to 5 (rounded to odd)</li>
+ *   <li>{@code platform_material}: platform block; defaults to {@code minecraft:netherrack}</li>
+ *   <li>{@code max_chunk_loads}: maximum chunks loaded during this search</li>
  * </ul>
  */
 public class PortalTypeSpawnMethod implements SpawnMethod {
@@ -83,7 +84,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
         int samples = 0;
         int radiusReached = 0;
 
-        // 1. 中心点
+        // 1. Center point
         samples++;
         Site center = findSite(level, scanner, centerX, centerZ, minY, maxY,
                 portalWidth, portalHeight, avoidLava);
@@ -92,7 +93,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
             return naturalResult(level, dimension, center, angle, samples, 0, portalWidth, portalHeight);
         }
 
-        // 2. 同心环带
+        // 2. Concentric rings
         for (int radius = ringStep; radius <= searchRadius; radius += ringStep) {
             radiusReached = radius;
             int count = clamp(radius / 16, 8, 32);
@@ -126,7 +127,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
             }
         }
 
-        // 3. 保底：生成一个带净空的平台
+        // 3. Fallback: build a platform with clearance
         if (ctx.rule().getBool("build_platform", true)) {
             return buildPlatform(ctx, level, dimension, angle, samples, radiusReached,
                     portalWidth, portalHeight, centerX, centerZ);
@@ -139,8 +140,9 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
     // ------------------------------------------------------------------
 
     /**
-     * 在 (x,z) 列从高到低寻找第一个能容纳传送门的安全位置。
-     * 同一个 x/z 可能有多层平台，所以不能只取“第一个安全点”，要一直向下试。
+     * Scans the (x,z) column from top to bottom for the first safe position that can fit
+     * a portal. A column may contain multiple platforms, so it must continue downward
+     * instead of stopping at the first safe point.
      */
     private Site findSite(ServerLevel level, TerrainScanner scanner, int x, int z,
                           int minY, int maxY, int width, int height, boolean avoidLava) {
@@ -158,7 +160,7 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
                 continue;
             }
 
-            // 先试 X 方向，再试 Z 方向
+            // Try the X axis first, then the Z axis
             if (hasPortalSpace(level, x, z, y, true, width, height)) {
                 return new Site(feet, true);
             }
@@ -170,8 +172,9 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
     }
 
     /**
-     * 检查从 {@code (x, y, z)} 开始、沿 X 或 Z 方向延伸的传送门内部空间。
-     * 内部底部就是玩家脚部 y，底部框架在 y-1。
+     * Checks the portal interior extending along the X or Z axis from
+     * {@code (x, y, z)}. The interior bottom is the player's feet Y; the bottom frame is
+     * at y-1.
      */
     private boolean hasPortalSpace(ServerLevel level, int x, int y, int z,
                                    boolean alongX, int width, int height) {
@@ -179,8 +182,8 @@ public class PortalTypeSpawnMethod implements SpawnMethod {
             int px = alongX ? x + w : x;
             int pz = alongX ? z : z + w;
 
-            // 第一列是玩家实际站立/出生的一列，必须有实体地面；
-            // 其余列只要求内部是空气，底部框架可以贴着旁边的地面放置或在空中放置。
+            // The first column is where the player stands/spawns and must have solid ground;
+            // The remaining columns only need air inside; the bottom frame may sit on adjacent ground or in the air.
             if (w == 0) {
                 BlockPos ground = new BlockPos(px, y - 1, pz);
                 if (!SafePosFinder.isSafeGround(level, ground)) {

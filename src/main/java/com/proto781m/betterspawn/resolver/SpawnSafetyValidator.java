@@ -7,10 +7,10 @@ import net.minecraft.server.level.ServerLevel;
 import com.proto781m.betterspawn.util.SafePosFinder;
 
 /**
- * 出生点安全校验器：统一判定与告警。
+ * Spawn safety validator with shared checks and warnings.
  *
- * <p>所有方法最终都应调用 {@link #validate} 做二次确认，避免把玩家丢进岩浆、
- * 卡里、或悬空。
+ * <p>Every method should call {@link #validate} as a final check so players are never
+ * placed in lava, inside blocks, or over the void.
  */
 public final class SpawnSafetyValidator {
 
@@ -21,9 +21,7 @@ public final class SpawnSafetyValidator {
         return SafePosFinder.isSafeStandingPosition(level, pos);
     }
 
-    /**
-     * 校验出生点并返回警告列表（空列表表示无警告）。
-     */
+    /** Validates a spawn position and returns warnings; an empty list means no warnings. */
     public static List<String> validate(ServerLevel level, BlockPos pos) {
         List<String> warnings = new ArrayList<>();
         if (pos == null) {
@@ -39,7 +37,7 @@ public final class SpawnSafetyValidator {
         if (!SafePosFinder.isPassable(level.getBlockState(pos.above()))) {
             warnings.add("Head position is occupied");
         }
-        // 检查头顶是否有悬空方块遮挡视野（提示，不阻断）
+        // Warn if a floating block above the head blocks the view (advisory, not blocking).
         int blockedAbove = 0;
         for (int dy = 1; dy <= 4; dy++) {
             if (!SafePosFinder.isPassable(level.getBlockState(pos.above(dy)))) {

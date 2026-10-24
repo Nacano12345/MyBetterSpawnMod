@@ -10,9 +10,10 @@ import com.google.gson.JsonElement;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 监听数据包中的 {@code spawn_rules} 目录，reload 时刷新 {@link SpawnTemplateManager}。
+ * Listens to the datapack {@code spawn_rules} directory and refreshes
+ * {@link SpawnTemplateManager} on reload.
  *
- * <p>通过 {@code AddReloadListenerEvent} 注册。
+ * <p>Registered through {@code AddReloadListenerEvent}.
  */
 public class SpawnTemplateReloadListener extends SimpleJsonResourceReloadListener {
 

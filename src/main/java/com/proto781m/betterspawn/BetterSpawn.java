@@ -19,35 +19,35 @@ import net.neoforged.fml.config.ModConfig;
 import org.slf4j.Logger;
 
 /**
- * BetterSpawn 模组主入口。
+ * Main entry point for the BetterSpawn mod.
  *
- * <p>模组 ID: {@value #MODID}<br>
- * 显示名: Proto781M's Better Spawn<br>
- * 加载器: NeoForge 1.21+
+ * <p>Mod ID: {@value #MODID}<br>
+ * Display name: Proto781M's Better Spawn<br>
+ * Loader: NeoForge 1.21+
  */
 @Mod(BetterSpawn.MODID)
 public class BetterSpawn {
 
-    /** 模组 ID，必须与 neoforge.mods.toml 中的 modId 一致。 */
+    /** Mod ID. Must match the modId in neoforge.mods.toml. */
     public static final String MODID = "betterspawn";
 
-    /** 共享日志实例。 */
+    /** Shared logger. */
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public BetterSpawn(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, BetterSpawnConfig.SPEC);
 
         registerMethods();
-        // 保证内置模板在数据包 reload 之前就可读
+        // Ensure built-in templates are readable before a datapack reload.
         SpawnTemplateManager.ensureLoaded();
 
-        // 事件监听器通过 @EventBusSubscriber 自动注册：
+        // Event listeners are registered automatically through @EventBusSubscriber:
         // CommandRegistrationHandler / ReloadListenerHandler / DimensionSpawnInitializer /
         // RespawnPositionHandler / PlayerSpawnSlotHandler / VerifyTaskManager
         LOGGER.info("BetterSpawn loaded (NeoForge 1.21)");
     }
 
-    /** 诊断日志是否开启（配置 debug.enableDiagnosticLogs）。 */
+    /** Whether diagnostic logging is enabled (debug.enableDiagnosticLogs). */
     public static boolean diagnosticsEnabled() {
         try {
             return BetterSpawnConfig.ENABLE_DIAGNOSTIC_LOGS.get();
@@ -56,7 +56,7 @@ public class BetterSpawn {
         }
     }
 
-    /** 仅在开启诊断日志时输出，避免日常日志刷屏。 */
+    /** Emits output only when diagnostic logging is enabled to avoid noisy logs. */
     public static void diag(String message, Object... args) {
         if (diagnosticsEnabled()) {
             LOGGER.info("[diag] " + message, args);

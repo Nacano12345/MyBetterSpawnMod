@@ -4,17 +4,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 /**
- * 版本适配层：读写世界（维度）出生点。
+ * Version adapter for reading and writing world (dimension) spawn points.
  *
- * <p>写入统一走 {@link ServerLevel#setDefaultSpawnPos(BlockPos, float)}，
- * 这样会同时更新 {@code level.dat}、通知客户端、并维护出生区块 ticket。
+ * <p>Writes go through {@link ServerLevel#setDefaultSpawnPos(BlockPos, float)}, which
+ * updates {@code level.dat}, notifies clients, and maintains the spawn-chunk ticket.
  */
 public final class SpawnAdapter {
 
     private SpawnAdapter() {
     }
 
-    /** 写入维度当前的原版出生点（同步到 level.dat 并通知客户端）。 */
+    /** Writes the dimension's current vanilla spawn point (updates level.dat and notifies clients). */
     public static void setLevelSpawn(ServerLevel level, BlockPos pos, float angle) {
         level.setDefaultSpawnPos(pos, angle);
     }

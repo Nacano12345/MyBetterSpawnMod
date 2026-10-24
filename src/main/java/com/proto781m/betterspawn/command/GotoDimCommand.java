@@ -43,22 +43,25 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
 /**
- * {@code /gotodim}（同时注册为 {@code /betterspawn gotodim}）：沙盒测试信息。
+ * {@code /gotodim} (also registered as {@code /betterspawn gotodim}): sandbox testing
+ * command.
  *
  * <pre>
  * /gotodim [&lt;dimension&gt;] [simulate|teleport|verify] [--method &lt;id&gt;] [--params &lt;json&gt;]
  *          [--seed &lt;n&gt;] [--repeat &lt;n&gt;] [--timeout &lt;ticks&gt;] [--verbose] [--all]
  * </pre>
  *
- * <p>所有参数都可省略：维度默认当前维度，模式默认 {@code simulate}。
- * {@code --method}/{@code --params} 会真正应用临时规则，不再像旧实现那样被忽略。
+ * <p>All arguments are optional. The dimension defaults to the current dimension and
+ * the mode defaults to {@code simulate}. {@code --method} and {@code --params} apply
+ * temporary rule overrides.
  *
- * <p>模板在 {@code parameters} 中设置 {@code allow_position_overwrite=true} 后，
- * 探测位置会取该维度当前的全局出生点（Overworld 读 {@code level.dat}，其他维度读
- * {@code WorldSpawnData}），因此 {@code worldspawn global} 修改后立即生效；默认关闭。
- * 搜索类方法覆盖 {@code center_x/center_z}，{@code fixed}/{@code platform} 覆盖坐标，
- * {@code portal_type} 还会覆盖其平台兜底坐标。{@code --params} 显式给出位置参数时，
- * 本次运行始终以调用者为准。
+ * <p>When a template sets {@code allow_position_overwrite=true} in {@code parameters},
+ * the probe uses the dimension's current global spawn (Overworld: {@code level.dat};
+ * other dimensions: {@code WorldSpawnData}), so {@code worldspawn global} takes effect
+ * immediately. This is disabled by default. Search methods overwrite
+ * {@code center_x/center_z}; {@code fixed} and {@code platform} overwrite their
+ * coordinates; {@code portal_type} also updates its platform fallback. Explicit
+ * position arguments in {@code --params} always take precedence for that run.
  */
 public final class GotoDimCommand {
 
@@ -83,14 +86,14 @@ public final class GotoDimCommand {
     }
 
     // ------------------------------------------------------------------
-    // 参数解析
+    // Argument parsing
     // ------------------------------------------------------------------
 
     private static int dispatch(CommandContext<CommandSourceStack> ctx, String raw) throws CommandSyntaxException {
         MinecraftServer server = ctx.getSource().getServer();
         List<String> tokens = tokenize(raw == null ? "" : raw.trim());
 
-        // 维度可以放在任意位置，优先取最后一个（新语法：test_arg... dim）
+        // The dimension may appear anywhere; prefer the last token (new syntax: test_arg... dim).
         ResourceKey<Level> dimension = null;
         List<String> options = new ArrayList<>(tokens);
         for (int i = tokens.size() - 1; i >= 0; i--) {
@@ -196,9 +199,8 @@ public final class GotoDimCommand {
         }
     }
 
-    /**
-     * 按空白拆分参数，但保留花括号/引号内的空白，方便 {@code --params {"x": 1}}。
-     */
+    /** Splits arguments on whitespace while preserving whitespace inside braces and quotes,
+     * so {@code --params {"x": 1}} stays intact. */
     private static List<String> tokenize(String raw) {
         List<String> tokens = new ArrayList<>();
         if (raw == null || raw.isBlank()) {
@@ -213,7 +215,7 @@ public final class GotoDimCommand {
         for (int i = 0; i < raw.length(); i++) {
             char c = raw.charAt(i);
             if (c == '\'' && !inDoubleQuote) {
-                // 单引号只用于 shell 风格的参数包裹，不写进 JSON
+                // Single quotes are only for shell-style argument wrapping and are not written into JSON.
                 inSingleQuote = !inSingleQuote;
                 continue;
             }
@@ -249,8 +251,8 @@ public final class GotoDimCommand {
         MinecraftServer server = source.getServer();
         String remaining = builder.getRemaining();
 
-        // greedyString 的补全必须把 range 收窄到“当前这个单词”，否则客户端会按整个参数过滤，
-        // 表现就是只有第一个参数能补全。
+        // For greedyString completion, narrow the range to the current token; otherwise the client
+        // filters against the whole argument, so only the first parameter can be completed.
         int currentStart = currentTokenStart(remaining);
         String current = remaining.substring(currentStart);
         List<String> before = tokenize(remaining.substring(0, currentStart));
@@ -258,13 +260,13 @@ public final class GotoDimCommand {
 
         SuggestionsBuilder offset = builder.createOffset(builder.getStart() + currentStart);
 
-        // 正在补全 --method 的值
+        // Completing the --method value
         if ("--method".equals(last)) {
             suggestValues(offset, current, SpawnMethodRegistry.getAllMethods().keySet());
             return offset.buildFuture();
         }
 
-        // 正在补全 --params 的值：给出常用参数 JSON
+        // Completing the --params value: suggest common parameter JSON
         if ("--params".equals(last)) {
             if (current.isEmpty() || current.startsWith("{")) {
                 suggestValues(offset, current, List.of(
@@ -282,7 +284,7 @@ public final class GotoDimCommand {
             return offset.buildFuture();
         }
 
-        // 数值参数不提供补全，避免误导
+        // Do not suggest numeric options to avoid misleading completions
         if ("--seed".equals(last) || "--repeat".equals(last) || "--timeout".equals(last)) {
             return offset.buildFuture();
         }
@@ -312,7 +314,7 @@ public final class GotoDimCommand {
                     .forEach(dimensions::add);
         }
 
-        // 第一个单词：模式 / 选项；维度按新语法放在最后，输入 minecraft: 时再推维度
+        // First token: mode or option. Dimensions go last in the new syntax; suggest them when the input contains a namespace.
         if (before.isEmpty()) {
             if (current.startsWith("--")) {
                 suggestValues(offset, current, flags);
@@ -325,7 +327,7 @@ public final class GotoDimCommand {
             return offset.buildFuture();
         }
 
-        // 后续单词：模式 / 选项 / 维度（维度可以放在最后）
+        // Later tokens: modes, options, or dimensions (the dimension may be last)
         if (current.startsWith("--")) {
             suggestValues(offset, current, flags);
         } else if (current.contains(":")) {
@@ -338,7 +340,8 @@ public final class GotoDimCommand {
         return offset.buildFuture();
     }
 
-    /** 返回最后一个“单词”的起始下标（尊重引号和花括号内的空格）。 */
+    /** Returns the start index of the last token, respecting quotes and whitespace inside
+     * braces. */
     private static int currentTokenStart(String raw) {
         int start = 0;
         boolean inSingleQuote = false;
@@ -377,7 +380,7 @@ public final class GotoDimCommand {
     }
 
     // ------------------------------------------------------------------
-    // 单次/多次执行
+    // Single or repeated execution
     // ------------------------------------------------------------------
 
     private static int runOne(CommandContext<CommandSourceStack> ctx, ServerLevel level,
@@ -490,8 +493,8 @@ public final class GotoDimCommand {
             }
         }
 
-        // 只有模板显式允许时才用全局出生点覆盖探测位置，避免改变数据包原本的配置。
-        // --params 显式给出位置参数时始终保留调用者指定的位置。
+        // Overwrite the probe position with the global spawn only when the template explicitly allows it, so datapack configuration is preserved.
+        // Explicit position arguments in --params always take precedence.
         boolean allowOverwrite = !positionSpecified
                 && Boolean.TRUE.equals(params.get("allow_position_overwrite"));
         Optional<BlockPos> probeCenter = allowOverwrite
@@ -515,8 +518,9 @@ public final class GotoDimCommand {
     }
 
     /**
-     * 按方法类型把全局出生点写进对应位置参数。
-     * 全局出生点记录的是脚部位置；platform 的 y 是平台方块中心，所以需要减一。
+     * Writes the global spawn into the position parameters used by the method.
+     * The global spawn stores feet coordinates; a platform's {@code y} is the platform
+     * block center, so it is offset by one.
      */
     private static void applyGlobalPosition(Map<String, Object> params, String method, BlockPos center) {
         switch (method) {
@@ -545,8 +549,9 @@ public final class GotoDimCommand {
     }
 
     /**
-     * 当前维度的探测中心：主世界以 level.dat 为准（vanilla /setworldspawn 也会更新），
-     * 其他维度读取 WorldSpawnData。
+     * Current probe center for the dimension. The Overworld uses {@code level.dat}
+     * (vanilla {@code /setworldspawn} also updates it); other dimensions use
+     * {@code WorldSpawnData}.
      */
     private static Optional<BlockPos> currentProbeCenter(ServerLevel level) {
         if (level.dimension().equals(Level.OVERWORLD)) {
@@ -578,7 +583,7 @@ public final class GotoDimCommand {
                 pos.toString(), targetLevel.dimension().location().toString()));
 
         if (verify) {
-            // 跨维度传送后客户端需要时间加载区块，等 3 秒再校验
+            // After a cross-dimension teleport, the client needs time to load chunks; wait 3 seconds before verifying.
             VerifyTaskManager.schedule(player, targetLevel, pos, 60);
         }
     }

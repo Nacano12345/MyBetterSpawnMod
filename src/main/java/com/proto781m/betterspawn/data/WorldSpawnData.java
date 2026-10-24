@@ -17,23 +17,25 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * Layer 1 —— 维度默认出生点。
+ * Layer 1: per-dimension default spawn points.
  *
- * <p>每个维度一个全局默认出生点，存于 {@code SavedData}（key = {@code betterspawn_world_spawn}）。
- * 主世界的出生点会同步写回原版 {@code level.dat} 的 {@code SpawnX/Y/Z/Angle}，其他维度只存这里。
+ * <p>Each dimension has one global default spawn stored in {@code SavedData}
+ * (key {@code betterspawn_world_spawn}). The Overworld spawn is also written back to
+ * the vanilla {@code level.dat} {@code SpawnX/Y/Z/Angle} fields; other dimensions
+ * only use this data.
  *
- * <p>{@code version} 用于升级旧存档：旧版本曾经把失败回退的平台点写进存档，
- * 版本号不匹配时由初始化器重新解析。
+ * <p>{@code version} supports save migration. Older versions could store a failed
+ * platform fallback; the initializer re-resolves spawns when the version does not match.
  */
 public class WorldSpawnData extends SavedData {
 
     public static final String DATA_NAME = "betterspawn_world_spawn";
 
     /**
-     * 数据版本。
+     * Data version.
      * <ul>
-     *   <li>0 / 缺失：早期版本，可能是错误的平台回退点；</li>
-     *   <li>1：修复搜索与维度字段后的版本。</li>
+     *   <li>0 / missing: early version that may contain an incorrect platform fallback;</li>
+     *   <li>1: version with the fixed search and dimension handling.</li>
      * </ul>
      */
     public static final int CURRENT_VERSION = 1;
@@ -65,10 +67,10 @@ public class WorldSpawnData extends SavedData {
             try {
                 ResourceKey<Level> dimension = DimensionUtil.parse(entry.getString("dim"));
                 BlockPos pos = new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z"));
-                // 必须带上维度，旧代码这里默认成了主世界，导致跨维度重生错乱
+                // The dimension must be stored; older code defaulted to the Overworld and broke cross-dimension respawns.
                 data.spawns.put(dimension, new SpawnPoint(pos, dimension, entry.getFloat("angle")));
             } catch (Exception ignored) {
-                // 跳过损坏条目，避免整个 SavedData 加载失败
+                // Skip corrupted entries so the entire SavedData load does not fail.
             }
         }
         return data;
@@ -122,7 +124,7 @@ public class WorldSpawnData extends SavedData {
         }
     }
 
-    /** 旧存档需要重新解析出生点。 */
+    /** Whether an old save needs its spawn points re-resolved. */
     public boolean needsMigration() {
         return version < CURRENT_VERSION;
     }
@@ -138,7 +140,7 @@ public class WorldSpawnData extends SavedData {
         return version;
     }
 
-    /** 新玩家首次进入世界时要传送到的维度；默认主世界。 */
+    /** Dimension to teleport new players to on first join; defaults to the Overworld. */
     public ResourceKey<Level> spawnDimension() {
         return spawnDimension;
     }

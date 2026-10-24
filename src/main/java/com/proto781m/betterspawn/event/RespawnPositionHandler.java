@@ -16,9 +16,11 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerRespawnPositionEvent;
 
 /**
- * 重生位置拦截器：使用 NeoForge 的 {@link PlayerRespawnPositionEvent} 应用三层优先级。
+ * Respawn position interceptor. Applies the three-layer priority chain through
+ * NeoForge's {@link PlayerRespawnPositionEvent}.
  *
- * <p>只有解析出坐标时才修改 {@link DimensionTransition}；否则保持原版行为。
+ * <p>The {@link DimensionTransition} is modified only when a position is resolved;
+ * otherwise vanilla behavior is preserved.
  */
 @EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class RespawnPositionHandler {
@@ -39,7 +41,7 @@ public final class RespawnPositionHandler {
         ResourceKey<Level> deathDimension = player.level().dimension();
         ResolveResult result = SpawnPointResolver.resolveRespawn(player, deathDimension, server);
         if (result.pos() == null) {
-            // 让原版继续处理（通常是主世界默认出生点）
+            // Let vanilla handle it (usually the Overworld default spawn).
             return;
         }
 
@@ -61,7 +63,7 @@ public final class RespawnPositionHandler {
                 event.getDimensionTransition().postDimensionTransition());
 
         event.setDimensionTransition(transition);
-        // 保留原版的床/锚 NBT，这样床/锚槽在下次重生时仍能参与优先级判断
+        // Keep the vanilla bed/anchor NBT so those slots can still participate in the next respawn priority check.
         event.setCopyOriginalSpawnPosition(true);
         BetterSpawn.diag("Respawn {} in {} -> {} at {} in {}",
                 player.getScoreboardName(), deathDimension.location(), result.usedMethod(),

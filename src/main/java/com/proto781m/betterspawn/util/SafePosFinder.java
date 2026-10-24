@@ -6,16 +6,16 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 出生点安全位置判定工具。
+ * Utility for checking safe spawn positions.
  *
- * <p>所有出生方法在返回坐标前，都应通过这里做一次安全校验，确保玩家不会
- * 卡在方块里、掉进岩浆/水里，或站在虚空上。
+ * <p>Every spawn method should run this check before returning coordinates so players
+ * are not stuck in blocks, dropped into lava or water, or left over the void.
  *
- * <p>判定规则：
+ * <p>Rules:
  * <ul>
- *   <li>脚下（pos 下方）必须是能站立的实体方块，且不是流体；</li>
- *   <li>脚部与头部所在格必须是空气或可替换方块（草、花等）；</li>
- *   <li>脚部与头部所在格不能是流体（水/岩浆）。</li>
+ *   <li>the block below the feet must be a solid, non-fluid block suitable for standing;</li>
+ *   <li>the feet and head blocks must be air or replaceable (grass, flowers, etc.);</li>
+ *   <li>the feet and head blocks must not contain fluid (water or lava).</li>
  * </ul>
  */
 public final class SafePosFinder {
@@ -23,13 +23,13 @@ public final class SafePosFinder {
     private SafePosFinder() {
     }
 
-    /** 判断 {@code ground} 处是否能作为站立地面（顶面稳固且非流体）。 */
+    /** Returns whether {@code ground} is a valid standing surface (solid top and not fluid). */
     public static boolean isSafeGround(ServerLevel level, BlockPos ground) {
         BlockState state = level.getBlockState(ground);
         return state.isFaceSturdy(level, ground, Direction.UP) && state.getFluidState().isEmpty();
     }
 
-    /** 判断 {@code pos} 是否能作为玩家站立点（脚部位置）。 */
+    /** Returns whether {@code pos} is a valid player standing position (feet position). */
     public static boolean isSafeStandingPosition(ServerLevel level, BlockPos pos) {
         if (!isSafeGround(level, pos.below())) {
             return false;
@@ -42,22 +42,23 @@ public final class SafePosFinder {
         return feet.getFluidState().isEmpty() && head.getFluidState().isEmpty();
     }
 
-    /** 是否可通过（空气或可被替换的方块，如草、花、雪）。 */
+    /** Returns whether a block is passable (air or replaceable, such as grass, flowers, or snow). */
     public static boolean isPassable(BlockState state) {
         return state.isAir() || state.canBeReplaced();
     }
 
     /**
-     * 以 {@code center} 为中心，在指定半径内寻找第一个安全站立点。
-     * 搜索顺序：先上下微调，再按曼哈顿距离扩展，适合定点方法的安全修正。
+     * Searches within the given radius around {@code center} for the first safe standing
+     * position. It checks small vertical offsets first, then expands by Manhattan
+     * distance. Useful for correcting fixed-position methods.
      *
-     * @return 找到的安全点，找不到返回 {@code null}
+     * @return the safe position, or {@code null} if none is found
      */
     public static BlockPos findSafeAround(ServerLevel level, BlockPos center, int maxRadius) {
         if (isSafeStandingPosition(level, center)) {
             return center;
         }
-        // 先尝试在中心附近上下找
+        // First check small vertical offsets around the center.
         for (int dy = 1; dy <= 4; dy++) {
             if (isSafeStandingPosition(level, center.above(dy))) {
                 return center.above(dy);
@@ -66,12 +67,12 @@ public final class SafePosFinder {
                 return center.below(dy);
             }
         }
-        // 再按半径向外找
+        // Then search outward by radius.
         for (int r = 1; r <= maxRadius; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     if (Math.abs(dx) != r && Math.abs(dz) != r) {
-                        continue; // 只检查外环
+                        continue; // Only check the outer ring
                     }
                     BlockPos candidate = center.offset(dx, 0, dz);
                     if (isSafeStandingPosition(level, candidate)) {

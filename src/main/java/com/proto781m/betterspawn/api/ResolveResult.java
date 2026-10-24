@@ -6,17 +6,17 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /**
- * 出生点解析结果。
+ * Result of a spawn-point resolution.
  *
- * @param pos             解析出的出生点（脚部坐标），失败时可能为 {@code null}
- * @param angle           朝向角度
- * @param usedMethod      实际使用的方法 id
- * @param fallbackUsed    是否触发了 fallback
- * @param elapsedMillis   解析耗时
- * @param samples         采样点数量
- * @param maxRadiusReached 搜索触及的最大半径
- * @param status          解析状态
- * @param warnings        警告信息（如“Y 上方有悬空方块”）
+ * @param pos              resolved spawn position (feet coordinates); may be {@code null} on failure
+ * @param angle            facing angle
+ * @param usedMethod       ID of the method that produced the result
+ * @param fallbackUsed     whether a fallback method was used
+ * @param elapsedMillis    resolution time in milliseconds
+ * @param samples          number of sampled positions
+ * @param maxRadiusReached maximum search radius reached
+ * @param status           resolution status
+ * @param warnings         warnings, such as a floating block above the spawn
  */
 public record ResolveResult(
         BlockPos pos,
@@ -32,15 +32,15 @@ public record ResolveResult(
 ) {
 
     public enum Status {
-        /** 成功找到安全出生点。 */
+        /** A safe spawn point was found. */
         OK,
-        /** 搜索超时。 */
+        /** The search timed out. */
         TIMEOUT,
-        /** 找到坐标但安全校验不通过。 */
+        /** A position was found but failed safety validation. */
         UNSAFE,
-        /** 走了 fallback 方法并找到位置。 */
+        /** A fallback method found a position. */
         FALLBACK,
-        /** 彻底失败（无坐标）。 */
+        /** No position was found. */
         EMPTY
     }
 

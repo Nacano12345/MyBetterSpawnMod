@@ -6,10 +6,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /**
- * 创建世界界面的“出生维度”选择。
+ * "Spawn dimension" selection for the create-world screen.
  *
- * <p>这是进程内的静态选择：客户端创建界面写入，单人/局域网的内置服务端在
- * {@code CreateSpawnPosition} 时读取。专用服务器没有创建界面，保持默认主世界。
+ * <p>This is a process-wide static selection. The client create screen writes it, and
+ * the integrated server reads it during {@code CreateSpawnPosition}. Dedicated servers
+ * have no create screen and keep the Overworld default.
  */
 public final class CreateWorldSpawnSelection {
 
@@ -39,7 +40,7 @@ public final class CreateWorldSpawnSelection {
         return selected;
     }
 
-    /** 维度显示名，使用模组自己的 {@code betterspawn.dimension.*} 翻译键。 */
+    /** Dimension display name, using the mod's {@code betterspawn.dimension.*} translation keys. */
     public static Component displayName(ResourceKey<Level> dimension) {
         String key = "betterspawn.dimension." + dimension.location().getPath();
         return Component.translatableWithFallback(key, dimension.location().toString());

@@ -17,16 +17,17 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerSetSpawnEvent;
 
 /**
- * 把原版的重生点变更镜像到 BetterSpawn 的双槽中。
+ * Mirrors vanilla respawn-point changes into BetterSpawn's slots.
  *
- * <p>这样不需要 Mixin 也能覆盖所有入口：
+ * <p>This covers every entry point without Mixins:
  * <ul>
- *   <li>床：{@code ServerPlayer.startSleepInBed} → {@code setRespawnPosition}；</li>
- *   <li>重生锚：{@code RespawnAnchorBlock.useWithoutItem} → {@code setRespawnPosition}；</li>
- *   <li>原版 {@code /spawnpoint} 与其他模组：同样调用 {@code setRespawnPosition}。</li>
+ *   <li>Beds: {@code ServerPlayer.startSleepInBed} calls {@code setRespawnPosition};</li>
+ *   <li>Respawn anchors: {@code RespawnAnchorBlock.useWithoutItem} calls {@code setRespawnPosition};</li>
+ *   <li>Vanilla {@code /spawnpoint} and other mods also call {@code setRespawnPosition}.</li>
  * </ul>
  *
- * <p>通过 {@code newSpawn} 处方块类型判断是床、锚还是普通指令点。
+ * <p>The block type at {@code newSpawn} determines whether this is a bed, an anchor,
+ * or a regular command point.
  */
 @EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class PlayerSpawnSlotHandler {
@@ -42,9 +43,9 @@ public final class PlayerSpawnSlotHandler {
 
         BlockPos pos = event.getNewSpawn();
         if (pos == null) {
-            // 原版/其他模组重置了重生点。这里不做清空：PlayerList 在重生时会用
-            // copyRespawnPosition(null) 调用本方法，如果清空会把玩家自己的槽误删。
-            // 需要清空时请使用 /betterspawn spawnpoint clear。
+            // Vanilla or another mod reset the respawn point. Do not clear here: PlayerList uses
+            // copyRespawnPosition(null) calls this method; clearing would delete the player's own slot.
+            // Use /betterspawn spawnpoint clear when clearing is intended.
             return;
         }
 

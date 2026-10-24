@@ -15,20 +15,21 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
- * 顶部方法（地狱）：从维度顶部向下扫描，找第一个“下方固体、上方空气、非流体”的位置。
+ * Top method (Nether): scans downward from the top of the dimension for the first
+ * position with solid ground below, air above, and no fluid.
  *
- * <p>关键点：地狱有基岩天花板，不能直接用高度图顶部当出生点；
- * 这里从高度图顶部下方开始向下扫描，避免站到基岩屋顶上。
+ * <p>The Nether has a bedrock ceiling, so the heightmap top cannot be used directly.
+ * This method starts below the heightmap top to avoid standing on the roof.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
- *   <li>{@code min_y}：最低搜索高度，默认 {@code minBuildHeight + 1}</li>
- *   <li>{@code max_y}：最高搜索高度，默认 {@code maxBuildHeight - 2}</li>
- *   <li>{@code search_radius}：水平搜索半径，默认 128</li>
- *   <li>{@code ring_step}：环带步长，默认 32</li>
- *   <li>{@code avoid_lava}：是否避开岩浆，默认 true</li>
- *   <li>{@code max_chunk_loads}：本次最多生成多少个区块</li>
+ *   <li>{@code center_x}, {@code center_z}: search center; defaults to 0,0</li>
+ *   <li>{@code min_y}: minimum search height; defaults to {@code minBuildHeight + 1}</li>
+ *   <li>{@code max_y}: maximum search height; defaults to {@code maxBuildHeight - 2}</li>
+ *   <li>{@code search_radius}: horizontal search radius; defaults to 128</li>
+ *   <li>{@code ring_step}: ring step; defaults to 32</li>
+ *   <li>{@code avoid_lava}: whether to avoid lava; defaults to true</li>
+ *   <li>{@code max_chunk_loads}: maximum chunks generated during this search</li>
  * </ul>
  */
 public class TopSpawnMethod implements SpawnMethod {
@@ -105,7 +106,7 @@ public class TopSpawnMethod implements SpawnMethod {
     private static BlockPos scanColumn(ServerLevel level, TerrainScanner scanner,
                                        int x, int z, int minY, int maxY,
                                        TerrainScanner.LiquidPolicy policy) {
-        // 必须先确保区块加载，否则 getHeight 会返回 minBuildHeight，被误判为虚空
+        // Load the chunk first; otherwise getHeight returns minBuildHeight and the column looks like void.
         if (!scanner.ensureChunk(x, z)) {
             return null;
         }

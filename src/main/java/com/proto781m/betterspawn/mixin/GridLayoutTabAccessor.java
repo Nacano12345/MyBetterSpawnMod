@@ -5,7 +5,7 @@ import net.minecraft.client.gui.layouts.GridLayout;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/** 暴露 {@link GridLayoutTab#layout}，供 MoreTab 注入按钮。 */
+/** Exposes {@link GridLayoutTab#layout} so the MoreTab can inject the button. */
 @Mixin(GridLayoutTab.class)
 public interface GridLayoutTabAccessor {
 

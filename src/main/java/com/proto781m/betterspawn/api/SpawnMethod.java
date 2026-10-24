@@ -1,21 +1,23 @@
 package com.proto781m.betterspawn.api;
 
 /**
- * 出生点计算方法接口。
+ * Interface for spawn-point calculation methods.
  *
- * <p>每种方法只负责“计算坐标”，不负责落库；由调用方（{@code SpawnMethodResolver}
- * 或 {@code DimensionSpawnInitializer}）决定是否写入持久化数据。
+ * <p>A method only calculates coordinates; it does not persist them. The caller
+ * ({@code SpawnMethodResolver} or {@code DimensionSpawnInitializer}) decides whether
+ * to store the result.
  */
 public interface SpawnMethod {
 
-    /** 方法 id，必须与 JSON 模板中的 {@code method} 字段一致，全小写。 */
+    /** Method ID. Must match the {@code method} field in the JSON template and be lowercase. */
     String id();
 
     /**
-     * 解析出生点。
+     * Resolves a spawn point.
      *
-     * @param ctx 解析上下文
-     * @return 解析结果（可能 {@link ResolveResult.Status#UNSAFE} / {@code TIMEOUT} / {@code EMPTY}）
+     * @param ctx resolution context
+     * @return resolution result; may be {@link ResolveResult.Status#UNSAFE},
+     *         {@code TIMEOUT}, or {@code EMPTY}
      */
     ResolveResult resolve(SpawnContext ctx);
 }

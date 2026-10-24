@@ -1,11 +1,12 @@
 package com.proto781m.betterspawn.data;
 
-/** 玩家重生点槽类型。 */
+/** Player respawn slot types. */
 public enum SpawnSlotType {
-    /** 指令出生点（/spawnpoint set）：精确站立坐标，不依赖方块。 */
+    /** Command spawn ({@code /spawnpoint set}): exact standing position, independent of blocks. */
     COMMAND,
-    /** 床出生点：记录床方块位置，重生时验证方块仍有效。 */
+    /** Bed spawn: stores the bed block position and validates the block on respawn. */
     BED,
-    /** 重生锚出生点：记录锚方块位置，重生时验证 charges 与维度。 */
+    /** Respawn anchor spawn: stores the anchor block position and validates charges and
+     * dimension on respawn. */
     ANCHOR
 }

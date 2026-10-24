@@ -17,20 +17,21 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 平台方法：在指定坐标搭建一个平台，作为最后的保底出生点。
+ * Platform method: builds a platform at the given coordinates as a last-resort
+ * spawn point.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code x}, {@code y}, {@code z}：平台中心地面坐标，默认 0,64,0</li>
- *   <li>{@code size}：平台边长（奇数更对称），默认 3</li>
- *   <li>{@code material}：方块 id，默认 {@code minecraft:stone}</li>
+ *   <li>{@code x}, {@code y}, {@code z}: platform center ground coordinates; defaults to 0,64,0</li>
+ *   <li>{@code size}: platform side length (odd values are symmetric); defaults to 3</li>
+ *   <li>{@code material}: block ID; defaults to {@code minecraft:stone}</li>
  * </ul>
  *
- * <p>本方法在 {@code simulate=true} 时只返回坐标，不修改世界。
+ * <p>When {@code simulate=true}, the method returns coordinates without modifying the world.
  */
 public class PlatformSpawnMethod implements SpawnMethod {
 
-    /** 单例，供维度初始化器在模板完全失败时直接调用。 */
+    /** Singleton used by the dimension initializer when the template fails completely. */
     public static final PlatformSpawnMethod INSTANCE = new PlatformSpawnMethod();
 
     private PlatformSpawnMethod() {
@@ -47,7 +48,7 @@ public class PlatformSpawnMethod implements SpawnMethod {
         ResourceKey<Level> dimension = level.dimension();
         RandomSource rng = RandomSource.create(ctx.seed());
 
-        // 模板缺失时也要能工作：构造一个默认平台规则，而不是直接 NPE
+        // Work even without a template: build a default platform rule instead of throwing an NPE.
         var rule = ctx.rule() != null ? ctx.rule() : defaultRule(level);
 
         int x = rule.getInt("x", 0);
@@ -55,7 +56,7 @@ public class PlatformSpawnMethod implements SpawnMethod {
         int z = rule.getInt("z", 0);
         int size = Math.max(1, rule.getInt("size", 3));
         if (size % 2 == 0) {
-            size++; // 保持中心对称
+            size++; // Keep the platform center-symmetric
         }
         String materialId = rule.getString("material", "minecraft:stone");
 

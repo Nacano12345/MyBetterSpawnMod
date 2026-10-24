@@ -14,18 +14,20 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 
 /**
- * 浮岛方法：从 {@code min_radius} 开始向外做同心环带搜索，寻找最近的有效陆地。
+ * Floating-island method: searches outward in concentric rings starting at
+ * {@code min_radius} for the nearest valid land.
  *
- * <p>和默认方法的区别是搜索范围更大、样本更密，并且可以跳过中心区域，
- * 适合“中心是虚空/海洋、周围有浮岛”的自定义维度。
+ * <p>Unlike the default method, it uses a larger search area and denser samples and
+ * can skip the center. It is intended for custom dimensions with a void or ocean
+ * center and islands around it.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
- *   <li>{@code min_radius}：起始半径，默认 64</li>
- *   <li>{@code max_radius}：最大半径，默认 2048</li>
- *   <li>{@code ring_step}：环带步长，默认 64</li>
- *   <li>{@code max_chunk_loads}：本次最多生成多少个区块</li>
+ *   <li>{@code center_x}, {@code center_z}: search center; defaults to 0,0</li>
+ *   <li>{@code min_radius}: starting radius; defaults to 64</li>
+ *   <li>{@code max_radius}: maximum radius; defaults to 2048</li>
+ *   <li>{@code ring_step}: ring step; defaults to 64</li>
+ *   <li>{@code max_chunk_loads}: maximum chunks generated during this search</li>
  * </ul>
  */
 public class FloatingIslandSpawnMethod implements SpawnMethod {

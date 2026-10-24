@@ -1,11 +1,9 @@
 package com.proto781m.betterspawn.config;
 
-/**
- * 重生优先级策略：指令出生点与床/锚出生点谁优先。
- */
+/** Respawn priority policy: whether the command spawn or the bed/anchor spawn wins. */
 public enum RespawnPolicy {
-    /** 指令出生点（/spawnpoint set）优先于床/锚。兼容原版直觉，推荐默认。 */
+    /** Command spawn ({@code /spawnpoint set}) takes priority over bed/anchor. Recommended default. */
     COMMAND_OVER_BED,
-    /** 床/锚出生点优先于指令出生点。 */
+    /** Bed/anchor spawn takes priority over the command spawn. */
     BED_OVER_COMMAND
 }

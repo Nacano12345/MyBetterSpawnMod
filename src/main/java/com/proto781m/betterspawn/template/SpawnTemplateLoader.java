@@ -9,10 +9,10 @@ import java.util.Map;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 把 JSON 元素解析成 {@link SpawnRule}。
+ * Parses a JSON element into a {@link SpawnRule}.
  *
- * <p>解析失败时返回 {@code null} 并记录日志，不抛出异常，
- * 避免一个坏模板拖垮整个数据包 reload。
+ * <p>On parse failure, returns {@code null} and logs the error instead of throwing, so
+ * one bad template cannot break the entire datapack reload.
  */
 public final class SpawnTemplateLoader {
 

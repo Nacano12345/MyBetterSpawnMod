@@ -29,10 +29,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * {@code /betterspawn spawnpoint} 子命令（双槽版）。
+ * {@code /betterspawn spawnpoint} subcommands (slot-based variant).
  *
- * <p>参数可省略：坐标默认玩家脚部位置，角度默认当前朝向，维度默认玩家当前维度。
- * 床/锚槽记录的是锚点方块位置，重生时再围绕它寻找安全站立点。
+ * <p>Arguments may be omitted: the position defaults to the player's feet, the angle
+ * defaults to the current yaw, and the dimension defaults to the player's current
+ * dimension. Bed and anchor slots store the anchor block position; a safe standing
+ * position is resolved around it on respawn.
  */
 public final class SpawnPointCommand {
 
@@ -96,7 +98,7 @@ public final class SpawnPointCommand {
     }
 
     // ------------------------------------------------------------------
-    // 参数辅助
+    // Argument helpers
     // ------------------------------------------------------------------
 
     private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ResourceKey<Level>> dimension(String name) {
@@ -118,7 +120,7 @@ public final class SpawnPointCommand {
     }
 
     // ------------------------------------------------------------------
-    // 执行
+    // Execution
     // ------------------------------------------------------------------
 
     private static int execSet(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> targets,
@@ -137,10 +139,10 @@ public final class SpawnPointCommand {
                     SpawnSlotType.COMMAND, actualDimension, actualPos, actualAngle));
 
             if (BetterSpawnConfig.SYNC_VANILLA_NBT.get()) {
-                // forced=true，确保非床/锚坐标也能写入原版 NBT
+                // forced=true so non-bed/non-anchor coordinates are also written to vanilla NBT
                 target.setRespawnPosition(actualDimension, actualPos, actualAngle, true, true);
-                // setRespawnPosition 会触发 PlayerSpawnSlotHandler，用玩家当前朝向覆盖槽；
-                // 这里再写一次，确保显式 angle 生效
+                // setRespawnPosition triggers PlayerSpawnSlotHandler, which overwrites the slot with the player's current yaw;
+                // Write it again here so an explicit angle takes effect.
                 PlayerSpawnData.setSlot(target, SpawnSlot.valid(
                         SpawnSlotType.COMMAND, actualDimension, actualPos, actualAngle));
             }

@@ -14,10 +14,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
 /**
- * Layer 2 + Layer 3 —— 玩家维度出生点 + 双槽重生点。
+ * Layer 2 and Layer 3: per-player dimension spawns and command/bed/anchor slots.
  *
- * <p>全部存于玩家自己的持久化 NBT（{@code player.getPersistentData()} 下的
- * {@value #ROOT} 复合标签），由 NeoForge 随玩家存档保存/读取。
+ * <p>All data is stored in the player's persistent NBT under the {@value #ROOT}
+ * compound tag, which NeoForge saves and loads with the player.
  */
 public final class PlayerSpawnData {
 
@@ -28,7 +28,7 @@ public final class PlayerSpawnData {
     private PlayerSpawnData() {
     }
 
-    /** 获取玩家的 BetterSpawn 根复合标签（不存在则创建并挂回玩家数据）。 */
+    /** Returns the player's BetterSpawn root compound, creating and attaching it if absent. */
     public static CompoundTag root(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
         CompoundTag persisted;
@@ -46,10 +46,11 @@ public final class PlayerSpawnData {
     }
 
     /**
-     * 写回根标签。
+     * Writes the root tag back.
      *
-     * <p>必须放在 {@code PlayerPersisted} 里：{@code ServerPlayer#restoreFrom} 只复制
-     * 这个子标签到重生后的新玩家，直接放在 {@code NeoForgeData} 根上的数据会在死亡后丢失。
+     * <p>It must live under {@code PlayerPersisted}: {@code ServerPlayer#restoreFrom} only
+     * copies that subtree to the new player after death. Data placed directly under
+     * {@code NeoForgeData} would be lost on death.
      */
     private static void saveRoot(ServerPlayer player, CompoundTag root) {
         CompoundTag persistent = player.getPersistentData();
@@ -64,7 +65,7 @@ public final class PlayerSpawnData {
     }
 
     // ------------------------------------------------------------------
-    // Layer 2：玩家维度出生点
+    // Layer 2: per-player dimension spawns
     // ------------------------------------------------------------------
 
     public static Optional<SpawnPoint> getDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension) {
@@ -74,7 +75,7 @@ public final class PlayerSpawnData {
             CompoundTag t = list.getCompound(i);
             if (t.getString("dim").equals(id)) {
                 BlockPos pos = new BlockPos(t.getInt("x"), t.getInt("y"), t.getInt("z"));
-                // 关键：带上是哪个维度，否则会默认成主世界
+                // Important: store the dimension; otherwise it defaults to the Overworld.
                 return Optional.of(new SpawnPoint(pos, dimension, t.getFloat("angle")));
             }
         }
@@ -91,7 +92,7 @@ public final class PlayerSpawnData {
                 BlockPos pos = new BlockPos(t.getInt("x"), t.getInt("y"), t.getInt("z"));
                 result.put(dimension, new SpawnPoint(pos, dimension, t.getFloat("angle")));
             } catch (Exception ignored) {
-                // 跳过损坏条目
+                // Skip corrupted entries
             }
         }
         return result;
@@ -148,7 +149,7 @@ public final class PlayerSpawnData {
     }
 
     // ------------------------------------------------------------------
-    // Layer 3：重生点槽
+    // Layer 3: respawn slots
     // ------------------------------------------------------------------
 
     public static Optional<SpawnSlot> getSlot(ServerPlayer player, SpawnSlotType type) {
@@ -182,7 +183,7 @@ public final class PlayerSpawnData {
     }
 
     // ------------------------------------------------------------------
-    // 实验性：首次进入世界时应用“出生维度”
+    // Experimental: apply the spawn dimension on first join
     // ------------------------------------------------------------------
 
     public static boolean hasInitialDimensionApplied(ServerPlayer player) {

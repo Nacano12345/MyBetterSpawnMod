@@ -29,15 +29,16 @@ import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 重生点优先级解析器：把三层数据串成完整链。
+ * Respawn priority resolver. Combines the three data layers into one chain.
  *
- * <p>优先级（由 {@link BetterSpawnConfig#RESPAWN_POLICY} 控制）：
+ * <p>Priority (controlled by {@link BetterSpawnConfig#RESPAWN_POLICY}):
  * <ul>
- *   <li>{@link RespawnPolicy#COMMAND_OVER_BED}：指令出生点 &gt; 床/锚 &gt; 玩家维度出生点 &gt; 维度默认出生点</li>
- *   <li>{@link RespawnPolicy#BED_OVER_COMMAND}：床/锚 &gt; 指令出生点 &gt; 玩家维度出生点 &gt; 维度默认出生点</li>
+ *   <li>{@link RespawnPolicy#COMMAND_OVER_BED}: command spawn &gt; bed/anchor &gt; player dimension spawn &gt; dimension default spawn</li>
+ *   <li>{@link RespawnPolicy#BED_OVER_COMMAND}: bed/anchor &gt; command spawn &gt; player dimension spawn &gt; dimension default spawn</li>
  * </ul>
  *
- * <p>床/锚和指令出生点是“玩家自己的重生点”，可以跨维度生效；后面的两级按死亡维度查找。
+ * <p>Bed/anchor and command spawns are player-specific and can work across dimensions;
+ * the last two layers are looked up in the death dimension.
  */
 public final class SpawnPointResolver {
 
@@ -45,11 +46,11 @@ public final class SpawnPointResolver {
     }
 
     /**
-     * 解析玩家死亡后的重生点。
+     * Resolves the respawn point after a player dies.
      *
-     * @param player         玩家（旧实体）
-     * @param deathDimension 死亡所在维度
-     * @return 最终重生点；{@code pos == null} 表示交还原版逻辑
+     * @param player         the old player entity
+     * @param deathDimension dimension where the player died
+     * @return final respawn point; {@code pos == null} means vanilla logic should handle it
      */
     public static ResolveResult resolveRespawn(ServerPlayer player, ResourceKey<Level> deathDimension,
                                                MinecraftServer server) {
@@ -75,7 +76,7 @@ public final class SpawnPointResolver {
             }
         }
 
-        // 玩家在死亡维度的个人世界出生点
+        // Player's personal world spawn in the death dimension
         Optional<SpawnPoint> personal = PlayerSpawnData.getDimensionSpawn(player, deathDimension);
         if (personal.isPresent()) {
             SpawnPoint point = personal.get();
@@ -93,7 +94,7 @@ public final class SpawnPointResolver {
                     player.getScoreboardName(), deathDimension.location());
         }
 
-        // 死亡维度的全局默认出生点
+        // Global default spawn of the death dimension
         ResolveResult world = worldSpawnResult(server, deathDimension);
         if (world != null) {
             BetterSpawn.diag("Respawn chain {}: world spawn {} at {}",
@@ -101,7 +102,7 @@ public final class SpawnPointResolver {
             return world;
         }
 
-        // 没有任何个人/维度出生点：按配置决定是否回主世界
+        // No personal or dimension spawn exists: the config decides whether to return to the Overworld.
         if (!deathDimension.equals(Level.OVERWORLD)
                 && BetterSpawnConfig.NO_PERSONAL_SPAWN.get() == NoPersonalSpawnBehavior.BACK_TO_OVERWORLD) {
             ResolveResult overworld = worldSpawnResult(server, Level.OVERWORLD);
@@ -114,8 +115,8 @@ public final class SpawnPointResolver {
     }
 
     /**
-     * 只跑 JSON 模板解析（用于首次生成维度 / {@code /gotodim}）。
-     * 不读取任何玩家个人数据。
+     * Runs only the JSON template resolution (used for initial dimension creation and
+     * {@code /gotodim}). It does not read any player-specific data.
      */
     public static ResolveResult resolveFromTemplate(MinecraftServer server, ResourceKey<Level> dimension,
                                                     boolean simulate) {
@@ -132,7 +133,7 @@ public final class SpawnPointResolver {
                 System.currentTimeMillis() + timeout, new SearchTrace());
     }
 
-    /** 使用指定规则解析一次（供 {@code /gotodim} 应用临时覆盖）。 */
+    /** Resolves once using the given rule (used by {@code /gotodim} for temporary overrides). */
     public static ResolveResult resolveRule(ServerLevel level, SpawnRule rule, long seed, boolean simulate,
                                             long deadlineMillis, SearchTrace trace) {
         SpawnContext ctx = new SpawnContext(level, rule, seed, simulate, deadlineMillis, trace);
@@ -140,7 +141,7 @@ public final class SpawnPointResolver {
     }
 
     // ------------------------------------------------------------------
-    // 指令出生点 / 床 / 锚
+    // Command spawn / bed / anchor
     // ------------------------------------------------------------------
 
     private static ResolveResult commandResult(ServerPlayer player, MinecraftServer server) {
@@ -152,13 +153,13 @@ public final class SpawnPointResolver {
         ServerLevel level = server.getLevel(slot.dimension());
         BlockPos safe = findSafe(level, slot.pos());
         if (safe == null) {
-            return null; // 指令点已被破坏：继续走下一层，而不是直接中断整条链
+            return null; // The command point is broken: continue to the next layer instead of aborting the chain.
         }
         return toResult(new SpawnPoint(safe, slot.dimension(), slot.angle()), "command_slot");
     }
 
     private static ResolveResult bedAnchorResult(ServerPlayer player, MinecraftServer server) {
-        // 床
+        // Bed
         Optional<SpawnSlot> bedOpt = PlayerSpawnData.getSlot(player, SpawnSlotType.BED);
         if (bedOpt.isPresent() && bedOpt.get().valid()) {
             SpawnSlot slot = bedOpt.get();
@@ -172,7 +173,7 @@ public final class SpawnPointResolver {
             }
         }
 
-        // 重生锚
+        // Respawn anchor
         Optional<SpawnSlot> anchorOpt = PlayerSpawnData.getSlot(player, SpawnSlotType.ANCHOR);
         if (anchorOpt.isPresent() && anchorOpt.get().valid()) {
             SpawnSlot slot = anchorOpt.get();
@@ -192,7 +193,7 @@ public final class SpawnPointResolver {
     }
 
     // ------------------------------------------------------------------
-    // 世界默认出生点
+    // World default spawn
     // ------------------------------------------------------------------
 
     private static ResolveResult worldSpawnResult(MinecraftServer server, ResourceKey<Level> dimension) {
@@ -202,7 +203,7 @@ public final class SpawnPointResolver {
 
         SpawnPoint point;
         if (dimension.equals(Level.OVERWORLD) && level != null) {
-            // /setworldspawn 直接改 level.dat；让原版数据优先，保证原版命令也能生效
+            // /setworldspawn writes level.dat directly; prefer vanilla data so the vanilla command also works.
             BlockPos vanillaPos = level.getLevelData().getSpawnPos();
             float vanillaAngle = level.getLevelData().getSpawnAngle();
             if (stored.isEmpty()

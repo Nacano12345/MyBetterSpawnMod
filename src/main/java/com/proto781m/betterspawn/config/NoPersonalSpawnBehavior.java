@@ -1,11 +1,9 @@
 package com.proto781m.betterspawn.config;
 
-/**
- * 玩家没有任何个人重生点时的回退行为。
- */
+/** Fallback behavior when a player has no personal respawn point. */
 public enum NoPersonalSpawnBehavior {
-    /** 回主世界的全局默认出生点（兼容原版行为）。 */
+    /** Return to the Overworld global spawn (vanilla-compatible behavior). */
     BACK_TO_OVERWORLD,
-    /** 留在死亡维度的玩家/全局出生点。 */
+    /** Stay in the death dimension's player or global spawn. */
     STAY_IN_DEATH_DIMENSION
 }

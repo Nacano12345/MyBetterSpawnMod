@@ -17,18 +17,19 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 /**
- * 默认方法（主世界）：从中心点开始，按同心环带向外搜索第一个安全陆地。
+ * Default method (Overworld): searches outward from the center in concentric rings
+ * for the first safe land position.
  *
- * <p>参数：
+ * <p>Parameters:
  * <ul>
- *   <li>{@code center_x}, {@code center_z}：搜索中心，默认 0,0</li>
- *   <li>{@code max_radius}：最大搜索半径，默认 512，硬上限 8192</li>
- *   <li>{@code ring_step}：环带步长，默认 64</li>
- *   <li>{@code max_chunk_loads}：本次最多生成多少个区块，默认取配置值</li>
+ *   <li>{@code center_x}, {@code center_z}: search center; defaults to 0,0</li>
+ *   <li>{@code max_radius}: maximum search radius; defaults to 512, hard limit 8192</li>
+ *   <li>{@code ring_step}: ring step; defaults to 64</li>
+ *   <li>{@code max_chunk_loads}: maximum chunks generated during this search</li>
  * </ul>
  *
- * <p>实现要点：{@code level.getHeight(...)} 返回的已经是脚部 Y；
- * 早期版本错误地再 {@code +1}，导致所有候选点都悬空一格、全部回退到平台方法。
+ * <p>{@code level.getHeight(...)} already returns the feet Y. Older versions added
+ * one extra block, which left every candidate floating and forced a platform fallback.
  */
 public class DefaultSpawnMethod implements SpawnMethod {
 
@@ -57,14 +58,14 @@ public class DefaultSpawnMethod implements SpawnMethod {
         float angle = rng.nextFloat() * 360.0F;
         int radiusReached = 0;
 
-        // 1. 中心点优先
+        // 1. Center point first
         BlockPos center = findSurface(scanner, centerX, centerZ, maxSurfaceDepth, minSurfaceY);
         if (center != null) {
             ctx.trace().ring(0, 1, 1);
             return ok(level, dimension, center, angle, scanner, 0);
         }
 
-        // 2. 同心环带
+        // 2. Concentric rings
         String budgetWarning = null;
         for (int radius = ringStep; radius <= maxRadius; radius += ringStep) {
             radiusReached = radius;
@@ -97,7 +98,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
             }
         }
 
-        // 3. 原版气候采样兜底：海里/大范围无陆地时，用原版 findSpawnPosition 选气候合适的区块
+        // 3. Vanilla climate-sampling fallback: over oceans or large landless areas, use findSpawnPosition to pick a suitable climate chunk.
         if (ctx.rule().getBool("vanilla_fallback", true)
                 && System.currentTimeMillis() < ctx.deadlineMillis()) {
             BlockPos vanilla = findVanillaSpawn(level, ctx, minSurfaceY);
@@ -122,11 +123,11 @@ public class DefaultSpawnMethod implements SpawnMethod {
 
     private static BlockPos findVanillaSpawn(ServerLevel level, SpawnContext ctx, int minSurfaceY) {
         try {
-            // 原版出生点气候采样：不生成区块，只选一个气候合适的候选区块
+            // Vanilla spawn climate sampling: choose a suitable climate candidate chunk without generating chunks.
             ChunkPos origin = new ChunkPos(
                     level.getChunkSource().randomState().sampler().findSpawnPosition());
 
-            // 原版本身会在 11x11 区块范围内找安全落点；这里做同样的事
+            // Vanilla searches an 11x11 chunk area for a safe landing point; do the same here.
             for (int radius = 0; radius <= 2; radius++) {
                 for (int dx = -radius; dx <= radius; dx++) {
                     for (int dz = -radius; dz <= radius; dz++) {
