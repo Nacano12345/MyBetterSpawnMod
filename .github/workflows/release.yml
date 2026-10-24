@@ -29,8 +29,18 @@ jobs:
       - name: Build
         run: ./gradlew build
 
+      - name: Resolve release notes
+        id: notes
+        run: |
+          FILE=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$FILE" ]; then
+            echo "body_path=$FILE" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: "Proto781M's Better Spawn ${{ github.ref_name }}"
           files: build/libs/*.jar
+          body_path: ${{ steps.notes.outputs.body_path }}
           generate_release_notes: true
