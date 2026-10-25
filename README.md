@@ -17,6 +17,16 @@ It is built around three ideas:
   Nether portal-site search, cave search, floating-island search, water-world search, and
   a platform fallback, plus a sandbox command for testing rules without committing them.
 
+## Downloads
+
+Release `v1.1.0` contains one jar per supported branch:
+
+| Minecraft | NeoForge | Jar |
+|---|---|---|
+| 1.21–1.21.1 | 21.1.265+ | `betterspawn-1.1.0+1.21.1.jar` |
+| 1.21.4 | 21.4.161+ | `betterspawn-1.1.0+1.21.4.jar` |
+| 1.21.11 | 21.11.48+ | `betterspawn-1.1.0+1.21.11.jar` |
+
 ## Documentation
 
 Usage, commands, template reference, configuration, diagnostics, and build instructions are

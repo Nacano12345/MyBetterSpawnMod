@@ -9,12 +9,24 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
+    name: Build ${{ matrix.label }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - branch: mc/1.21.1
+            label: 1.21.1
+          - branch: mc/1.21.4
+            label: 1.21.4
+          - branch: mc/1.21.11
+            label: 1.21.11
     steps:
-      - name: Checkout
+      - name: Checkout ${{ matrix.branch }}
         uses: actions/checkout@v4
         with:
+          ref: ${{ matrix.branch }}
           fetch-depth: 0
 
       - name: Set up JDK 21
@@ -29,6 +41,29 @@ jobs:
       - name: Build
         run: ./gradlew build
 
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: betterspawn-${{ matrix.label }}
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+  release:
+    name: Create combined release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release metadata
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all jars
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
       - name: Resolve release notes
         id: notes
         run: |
@@ -41,6 +76,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "Proto781M's Better Spawn ${{ github.ref_name }}"
-          files: build/libs/*.jar
+          files: artifacts/*.jar
           body_path: ${{ steps.notes.outputs.body_path }}
           generate_release_notes: true
