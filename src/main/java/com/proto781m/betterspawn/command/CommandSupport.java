@@ -136,7 +136,7 @@ public final class CommandSupport {
         MinecraftServer server = source.getServer();
         if (server != null) {
             for (ResourceLocation location : server.registryAccess()
-                    .registryOrThrow(Registries.DIMENSION).keySet()) {
+                    .lookupOrThrow(Registries.DIMENSION).keySet()) {
                 builder.suggest(location.toString());
             }
         }

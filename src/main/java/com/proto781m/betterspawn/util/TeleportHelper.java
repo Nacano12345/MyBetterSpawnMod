@@ -1,5 +1,6 @@
 package com.proto781m.betterspawn.util;
 
+import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -16,12 +17,12 @@ public final class TeleportHelper {
 
     /** Teleports the player to the given coordinates in the target dimension. */
     public static void teleport(ServerPlayer player, ServerLevel target, double x, double y, double z) {
-        player.teleportTo(target, x, y, z, player.getYRot(), player.getXRot());
+        player.teleportTo(target, x, y, z, Set.of(), player.getYRot(), player.getXRot(), false);
     }
 
     /** Teleports the player to the given coordinates in the target dimension with a
      * specified facing angle. */
     public static void teleport(ServerPlayer player, ServerLevel target, double x, double y, double z, float yaw, float pitch) {
-        player.teleportTo(target, x, y, z, yaw, pitch);
+        player.teleportTo(target, x, y, z, Set.of(), yaw, pitch, false);
     }
 }

@@ -19,7 +19,9 @@ public final class PlatformBuilder {
     /** Resolves a block ID, falling back to stone for invalid IDs or air. */
     public static BlockState resolveState(String materialId) {
         try {
-            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(materialId));
+            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(materialId))
+                    .map(holder -> holder.value())
+                    .orElse(null);
             if (block == null || block == Blocks.AIR) {
                 return Blocks.STONE.defaultBlockState();
             }

@@ -60,10 +60,10 @@ public class CaveSpawnMethod implements SpawnMethod {
 
         int centerX = ctx.rule().getInt("center_x", 0);
         int centerZ = ctx.rule().getInt("center_z", 0);
-        int minY = Math.max(level.getMinBuildHeight() + 1,
-                ctx.rule().getInt("min_y", level.getMinBuildHeight() + 1));
-        int maxY = Math.min(level.getMaxBuildHeight() - 2,
-                ctx.rule().getInt("max_y", level.getMaxBuildHeight() - 2));
+        int minY = Math.max(level.getMinY() + 1,
+                ctx.rule().getInt("min_y", level.getMinY() + 1));
+        int maxY = Math.min(level.getMaxY() - 2,
+                ctx.rule().getInt("max_y", level.getMaxY() - 2));
         int searchRadius = clamp(ctx.rule().getInt("search_radius", 128), 0, 4096);
         int ringStep = clamp(ctx.rule().getInt("ring_step", 32), 8, 512);
         int minAirHeight = clamp(ctx.rule().getInt("min_air_height", 2), 2, 8);

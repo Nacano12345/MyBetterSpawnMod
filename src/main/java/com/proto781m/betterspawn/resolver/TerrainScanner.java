@@ -73,14 +73,14 @@ public final class TerrainScanner {
             return null;
         }
 
-        int minY = level.getMinBuildHeight();
+        int minY = level.getMinY();
         int topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (topY <= minY + 1) {
             // The whole column has no solid block: a void world, or the chunk has not really generated.
             return null;
         }
 
-        int maxY = Math.min(topY, level.getMaxBuildHeight() - 2);
+        int maxY = Math.min(topY, level.getMaxY() - 2);
         int lowest;
         if (maxDepth <= 0 || maxDepth >= maxY - minY) {
             lowest = minY;
@@ -138,8 +138,8 @@ public final class TerrainScanner {
             return null;
         }
 
-        int start = Math.min(fromY, level.getMaxBuildHeight() - 2);
-        int end = Math.max(toY, level.getMinBuildHeight() + 1);
+        int start = Math.min(fromY, level.getMaxY() - 2);
+        int end = Math.max(toY, level.getMinY() + 1);
         for (int y = start; y >= end; y--) {
             BlockPos feet = new BlockPos(x, y, z);
             BlockPos groundPos = feet.below();

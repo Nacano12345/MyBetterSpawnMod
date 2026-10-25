@@ -60,8 +60,8 @@ public class PlatformSpawnMethod implements SpawnMethod {
         }
         String materialId = rule.getString("material", "minecraft:stone");
 
-        int minY = level.getMinBuildHeight() + 1;
-        int maxY = level.getMaxBuildHeight() - 3;
+        int minY = level.getMinY() + 1;
+        int maxY = level.getMaxY() - 3;
         BlockPos center = new BlockPos(x, Math.max(minY, Math.min(maxY, y)), z);
 
         TerrainScanner scanner = new TerrainScanner(level, ctx.deadlineMillis(), 1);

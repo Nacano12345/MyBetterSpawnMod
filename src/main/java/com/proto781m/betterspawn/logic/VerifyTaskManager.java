@@ -80,7 +80,7 @@ public final class VerifyTaskManager {
         boolean solidGround = ground.getFluidState().isEmpty()
                 && !ground.getCollisionShape(level, groundPos).isEmpty();
         boolean inLiquid = player.isInFluidType();
-        boolean inVoid = player.getY() < level.getMinBuildHeight() + 1;
+        boolean inVoid = player.getY() < level.getMinY() + 1;
         boolean atTarget = Math.abs(player.getY() - expected.getY()) <= 1.5;
         // After a cross-dimension teleport, the onGround flag may lag; solid ground below with the correct height also counts as success.
         boolean onGround = player.onGround() || (solidGround && atTarget);

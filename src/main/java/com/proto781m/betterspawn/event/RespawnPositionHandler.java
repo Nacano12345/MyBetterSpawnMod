@@ -9,7 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -19,7 +19,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerRespawnPositionEvent;
  * Respawn position interceptor. Applies the three-layer priority chain through
  * NeoForge's {@link PlayerRespawnPositionEvent}.
  *
- * <p>The {@link DimensionTransition} is modified only when a position is resolved;
+ * <p>The {@link TeleportTransition} is modified only when a position is resolved;
  * otherwise vanilla behavior is preserved.
  */
 @EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
@@ -54,15 +54,15 @@ public final class RespawnPositionHandler {
         }
 
         BlockPos spawnPos = result.pos();
-        DimensionTransition transition = new DimensionTransition(
+        TeleportTransition transition = new TeleportTransition(
                 targetLevel,
                 new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5),
                 Vec3.ZERO,
                 result.angle(),
                 0.0F,
-                event.getDimensionTransition().postDimensionTransition());
+                event.getTeleportTransition().postTeleportTransition());
 
-        event.setDimensionTransition(transition);
+        event.setTeleportTransition(transition);
         // Keep the vanilla bed/anchor NBT so those slots can still participate in the next respawn priority check.
         event.setCopyOriginalSpawnPosition(true);
         BetterSpawn.diag("Respawn {} in {} -> {} at {} in {}",

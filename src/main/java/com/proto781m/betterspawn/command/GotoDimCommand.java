@@ -309,7 +309,7 @@ public final class GotoDimCommand {
 
         List<String> dimensions = new ArrayList<>();
         if (!hasDimension && server != null) {
-            server.registryAccess().registryOrThrow(Registries.DIMENSION).keySet().stream()
+            server.registryAccess().lookupOrThrow(Registries.DIMENSION).keySet().stream()
                     .map(ResourceLocation::toString)
                     .forEach(dimensions::add);
         }
