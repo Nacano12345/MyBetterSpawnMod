@@ -1,10 +1,8 @@
 package com.proto781m.betterspawn.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
 import com.proto781m.betterspawn.data.PlayerSpawnData;
 import com.proto781m.betterspawn.data.SpawnSlot;
@@ -13,10 +11,7 @@ import java.util.Collection;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.ResourceKeyArgument;
-import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
@@ -26,7 +21,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * {@code /betterspawn spawnpoint} subcommands (slot-based variant).
@@ -46,18 +40,8 @@ public final class SpawnPointCommand {
                 .requires(src -> src.hasPermission(2));
 
         // /betterspawn spawnpoint set <targets> [<pos>] [<angle>] [<dimension>]
-        root.then(Commands.literal("set")
-                .then(Commands.argument("targets", EntityArgument.players())
-                        .executes(ctx -> execSet(ctx, targets(ctx), null, null, null))
-                        .then(Commands.argument("pos", Vec3Argument.vec3()).suggests((ctx, b) -> { b.suggest("~ ~ ~"); return b.buildFuture(); })
-                                .executes(ctx -> execSet(ctx, targets(ctx), vec(ctx), null, null))
-                                .then(Commands.argument("angle", FloatArgumentType.floatArg())
-                                        .executes(ctx -> execSet(ctx, targets(ctx), vec(ctx),
-                                                FloatArgumentType.getFloat(ctx, "angle"), null))
-                                        .then(dimension("dimension")
-                                                .executes(ctx -> execSet(ctx, targets(ctx), vec(ctx),
-                                                        FloatArgumentType.getFloat(ctx, "angle"),
-                                                        dimension(ctx, "dimension"))))))));
+        root.then(CommandSupport.targetPositionCommand("set",
+                (ctx, targets, pos, angle, dimension) -> execSet(ctx, targets, pos, angle, dimension)));
 
         // /betterspawn spawnpoint bed <targets> [<pos>] [<angle>] [<dimension>]
         root.then(slotCommand("bed", SpawnSlotType.BED));
@@ -68,11 +52,11 @@ public final class SpawnPointCommand {
         // /betterspawn spawnpoint clear <targets> [command|bed|anchor|all]
         root.then(Commands.literal("clear")
                 .then(Commands.argument("targets", EntityArgument.players())
-                        .executes(ctx -> execClear(ctx, targets(ctx), "all"))
-                        .then(Commands.literal("command").executes(ctx -> execClear(ctx, targets(ctx), "command")))
-                        .then(Commands.literal("bed").executes(ctx -> execClear(ctx, targets(ctx), "bed")))
-                        .then(Commands.literal("anchor").executes(ctx -> execClear(ctx, targets(ctx), "anchor")))
-                        .then(Commands.literal("all").executes(ctx -> execClear(ctx, targets(ctx), "all")))));
+                        .executes(ctx -> execClear(ctx, CommandSupport.players(ctx), "all"))
+                        .then(Commands.literal("command").executes(ctx -> execClear(ctx, CommandSupport.players(ctx), "command")))
+                        .then(Commands.literal("bed").executes(ctx -> execClear(ctx, CommandSupport.players(ctx), "bed")))
+                        .then(Commands.literal("anchor").executes(ctx -> execClear(ctx, CommandSupport.players(ctx), "anchor")))
+                        .then(Commands.literal("all").executes(ctx -> execClear(ctx, CommandSupport.players(ctx), "all")))));
 
         // /betterspawn spawnpoint query <target>
         root.then(Commands.literal("query")
@@ -83,40 +67,9 @@ public final class SpawnPointCommand {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> slotCommand(String name, SpawnSlotType type) {
-        return Commands.literal(name)
-                .then(Commands.argument("targets", EntityArgument.players())
-                        .executes(ctx -> execSetSlot(ctx, targets(ctx), null, null, null, type))
-                        .then(Commands.argument("pos", Vec3Argument.vec3()).suggests((ctx, b) -> { b.suggest("~ ~ ~"); return b.buildFuture(); })
-                                .executes(ctx -> execSetSlot(ctx, targets(ctx), vec(ctx), null, null, type))
-                                .then(Commands.argument("angle", FloatArgumentType.floatArg())
-                                        .executes(ctx -> execSetSlot(ctx, targets(ctx), vec(ctx),
-                                                FloatArgumentType.getFloat(ctx, "angle"), null, type))
-                                        .then(dimension("dimension")
-                                                .executes(ctx -> execSetSlot(ctx, targets(ctx), vec(ctx),
-                                                        FloatArgumentType.getFloat(ctx, "angle"),
-                                                        dimension(ctx, "dimension"), type))))));
-    }
-
-    // ------------------------------------------------------------------
-    // Argument helpers
-    // ------------------------------------------------------------------
-
-    private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, ResourceKey<Level>> dimension(String name) {
-        return Commands.argument(name, ResourceKeyArgument.key(Registries.DIMENSION));
-    }
-
-    @SuppressWarnings("unchecked")
-    private static ResourceKey<Level> dimension(CommandContext<CommandSourceStack> ctx, String name) {
-        return (ResourceKey<Level>) ctx.getArgument(name, ResourceKey.class);
-    }
-
-    private static Collection<ServerPlayer> targets(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        return EntityArgument.getPlayers(ctx, "targets");
-    }
-
-    private static BlockPos vec(CommandContext<CommandSourceStack> ctx) {
-        Vec3 value = Vec3Argument.getVec3(ctx, "pos");
-        return BlockPos.containing(value.x, value.y, value.z);
+        return CommandSupport.targetPositionCommand(name,
+                (ctx, targets, pos, angle, dimension) -> execSetSlot(
+                        ctx, targets, pos, angle, dimension, type));
     }
 
     // ------------------------------------------------------------------
