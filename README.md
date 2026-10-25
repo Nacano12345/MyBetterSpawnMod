@@ -39,7 +39,7 @@ kept in the **[Wiki](https://github.com/Nacano12345/MyBetterSpawnMod/wiki)**:
 
 ## Status
 
-Source is available and builds as `betterspawn-1.0.2+1.21.11.jar`. Some features are experimental;
+Source is available and builds as `betterspawn-1.1.0+1.21.11.jar`. Some features are experimental;
 see the Wiki for details and limitations.
 
 ## Logos
