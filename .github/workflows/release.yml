@@ -9,24 +9,12 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.label }}
+  release:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - branch: mc/1.21.1
-            label: 1.21.1
-          - branch: mc/1.21.4
-            label: 1.21.4
-          - branch: mc/1.21.11
-            label: 1.21.11
     steps:
-      - name: Checkout ${{ matrix.branch }}
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.branch }}
           fetch-depth: 0
 
       - name: Set up JDK 21
@@ -38,31 +26,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build
-        run: ./gradlew build
-
-      - name: Upload jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: betterspawn-${{ matrix.label }}
-          path: build/libs/*.jar
-          if-no-files-found: error
-
-  release:
-    name: Create combined release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout release metadata
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download all jars
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
+      - name: Build all Minecraft versions
+        run: ./gradlew buildAll
 
       - name: Resolve release notes
         id: notes
@@ -76,6 +41,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "Proto781M's Better Spawn ${{ github.ref_name }}"
-          files: artifacts/*.jar
+          files: |
+            versions/1.21.1/build/libs/*.jar
+            versions/1.21.4/build/libs/*.jar
+            versions/1.21.11/build/libs/*.jar
           body_path: ${{ steps.notes.outputs.body_path }}
           generate_release_notes: true

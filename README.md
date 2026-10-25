@@ -27,6 +27,30 @@ Release `v1.1.0` contains one jar per supported branch:
 | 1.21.4 | 21.4.161+ | `betterspawn-1.1.0+1.21.4.jar` |
 | 1.21.11 | 21.11.48+ | `betterspawn-1.1.0+1.21.11.jar` |
 
+## Project layout
+
+```text
+common/src/main/java        Shared code compiled for every Minecraft version
+common/src/main/resources   Shared assets, data pack defaults, and license
+common/src/main/templates   Shared neoforge.mods.toml template
+versions/1.21.1             NeoForge 21.1 code differences
+versions/1.21.4             NeoForge 21.4 code differences
+versions/1.21.11            NeoForge 21.11 code differences
+```
+
+Build all supported versions:
+
+```text
+./gradlew buildAll
+```
+
+Build or run one version:
+
+```text
+./gradlew :versions:1.21.1:build
+./gradlew :versions:1.21.11:runClient
+```
+
 ## Documentation
 
 Usage, commands, template reference, configuration, diagnostics, and build instructions are

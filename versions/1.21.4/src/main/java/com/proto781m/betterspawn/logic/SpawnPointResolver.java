@@ -1,0 +1,244 @@
+package com.proto781m.betterspawn.logic;
+
+import com.proto781m.betterspawn.BetterSpawn;
+import com.proto781m.betterspawn.api.ResolveResult;
+import com.proto781m.betterspawn.api.SearchTrace;
+import com.proto781m.betterspawn.api.SpawnContext;
+import com.proto781m.betterspawn.config.BetterSpawnConfig;
+import com.proto781m.betterspawn.config.NoPersonalSpawnBehavior;
+import com.proto781m.betterspawn.config.RespawnPolicy;
+import com.proto781m.betterspawn.data.PlayerSpawnData;
+import com.proto781m.betterspawn.data.SpawnPoint;
+import com.proto781m.betterspawn.data.SpawnSlot;
+import com.proto781m.betterspawn.data.SpawnSlotType;
+import com.proto781m.betterspawn.data.WorldSpawnData;
+import com.proto781m.betterspawn.resolver.SpawnMethodResolver;
+import com.proto781m.betterspawn.template.SpawnRule;
+import com.proto781m.betterspawn.template.SpawnTemplateManager;
+import com.proto781m.betterspawn.util.SafePosFinder;
+import java.util.List;
+import java.util.Optional;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+
+/**
+ * Respawn priority resolver. Combines the three data layers into one chain.
+ *
+ * <p>Priority (controlled by {@link BetterSpawnConfig#RESPAWN_POLICY}):
+ * <ul>
+ *   <li>{@link RespawnPolicy#COMMAND_OVER_BED}: command spawn &gt; bed/anchor &gt; player dimension spawn &gt; dimension default spawn</li>
+ *   <li>{@link RespawnPolicy#BED_OVER_COMMAND}: bed/anchor &gt; command spawn &gt; player dimension spawn &gt; dimension default spawn</li>
+ * </ul>
+ *
+ * <p>Bed/anchor and command spawns are player-specific and can work across dimensions;
+ * the last two layers are looked up in the death dimension.
+ */
+public final class SpawnPointResolver {
+
+    private SpawnPointResolver() {
+    }
+
+    /**
+     * Resolves the respawn point after a player dies.
+     *
+     * @param player         the old player entity
+     * @param deathDimension dimension where the player died
+     * @return final respawn point; {@code pos == null} means vanilla logic should handle it
+     */
+    public static ResolveResult resolveRespawn(ServerPlayer player, ResourceKey<Level> deathDimension,
+                                               MinecraftServer server) {
+        RespawnPolicy policy = BetterSpawnConfig.RESPAWN_POLICY.get();
+
+        if (policy == RespawnPolicy.COMMAND_OVER_BED) {
+            ResolveResult command = commandResult(player, server);
+            if (command != null) {
+                return command;
+            }
+            ResolveResult bed = bedAnchorResult(player, server);
+            if (bed != null) {
+                return bed;
+            }
+        } else {
+            ResolveResult bed = bedAnchorResult(player, server);
+            if (bed != null) {
+                return bed;
+            }
+            ResolveResult command = commandResult(player, server);
+            if (command != null) {
+                return command;
+            }
+        }
+
+        // Player's personal world spawn in the death dimension
+        Optional<SpawnPoint> personal = PlayerSpawnData.getDimensionSpawn(player, deathDimension);
+        if (personal.isPresent()) {
+            SpawnPoint point = personal.get();
+            ServerLevel level = server.getLevel(point.dimension());
+            BlockPos safe = findSafe(level, point.pos());
+            BetterSpawn.diag("Respawn chain {}: personal spawn {} -> safe {}",
+                    player.getScoreboardName(), point.pos(), safe);
+            if (safe != null) {
+                return toResult(new SpawnPoint(safe, point.dimension(), point.angle()), "player_dimension_spawn");
+            }
+            BetterSpawn.diag("Respawn chain {}: personal spawn {} is unsafe; falling through",
+                    player.getScoreboardName(), point.pos());
+        } else {
+            BetterSpawn.diag("Respawn chain {}: no personal spawn for {}",
+                    player.getScoreboardName(), deathDimension.location());
+        }
+
+        // Global default spawn of the death dimension
+        ResolveResult world = worldSpawnResult(server, deathDimension);
+        if (world != null) {
+            BetterSpawn.diag("Respawn chain {}: world spawn {} at {}",
+                    player.getScoreboardName(), deathDimension.location(), world.pos());
+            return world;
+        }
+
+        // No personal or dimension spawn exists: the config decides whether to return to the Overworld.
+        if (!deathDimension.equals(Level.OVERWORLD)
+                && BetterSpawnConfig.NO_PERSONAL_SPAWN.get() == NoPersonalSpawnBehavior.BACK_TO_OVERWORLD) {
+            ResolveResult overworld = worldSpawnResult(server, Level.OVERWORLD);
+            if (overworld != null) {
+                return overworld;
+            }
+        }
+
+        return ResolveResult.empty("vanilla", ResolveResult.Status.EMPTY);
+    }
+
+    /**
+     * Runs only the JSON template resolution (used for initial dimension creation and
+     * {@code /gotodim}). It does not read any player-specific data.
+     */
+    public static ResolveResult resolveFromTemplate(MinecraftServer server, ResourceKey<Level> dimension,
+                                                    boolean simulate) {
+        ServerLevel level = server.getLevel(dimension);
+        if (level == null) {
+            return ResolveResult.empty("no_level", ResolveResult.Status.EMPTY);
+        }
+        Optional<SpawnRule> rule = SpawnTemplateManager.get(dimension.location());
+        if (rule.isEmpty()) {
+            return ResolveResult.empty("no_template", ResolveResult.Status.EMPTY);
+        }
+        long timeout = Math.max(1, BetterSpawnConfig.SEARCH_TIMEOUT_TICKS.get()) * 50L;
+        return resolveRule(level, rule.get(), level.getSeed(), simulate,
+                System.currentTimeMillis() + timeout, new SearchTrace());
+    }
+
+    /** Resolves once using the given rule (used by {@code /gotodim} for temporary overrides). */
+    public static ResolveResult resolveRule(ServerLevel level, SpawnRule rule, long seed, boolean simulate,
+                                            long deadlineMillis, SearchTrace trace) {
+        SpawnContext ctx = new SpawnContext(level, rule, seed, simulate, deadlineMillis, trace);
+        return SpawnMethodResolver.INSTANCE.resolve(ctx);
+    }
+
+    // ------------------------------------------------------------------
+    // Command spawn / bed / anchor
+    // ------------------------------------------------------------------
+
+    private static ResolveResult commandResult(ServerPlayer player, MinecraftServer server) {
+        Optional<SpawnSlot> slotOpt = PlayerSpawnData.getSlot(player, SpawnSlotType.COMMAND);
+        if (slotOpt.isEmpty() || !slotOpt.get().valid()) {
+            return null;
+        }
+        SpawnSlot slot = slotOpt.get();
+        ServerLevel level = server.getLevel(slot.dimension());
+        BlockPos safe = findSafe(level, slot.pos());
+        if (safe == null) {
+            return null; // The command point is broken: continue to the next layer instead of aborting the chain.
+        }
+        return toResult(new SpawnPoint(safe, slot.dimension(), slot.angle()), "command_slot");
+    }
+
+    private static ResolveResult bedAnchorResult(ServerPlayer player, MinecraftServer server) {
+        // Bed
+        Optional<SpawnSlot> bedOpt = PlayerSpawnData.getSlot(player, SpawnSlotType.BED);
+        if (bedOpt.isPresent() && bedOpt.get().valid()) {
+            SpawnSlot slot = bedOpt.get();
+            ServerLevel level = server.getLevel(slot.dimension());
+            if (level != null && BedBlock.canSetSpawn(level)
+                    && level.getBlockState(slot.pos()).getBlock() instanceof BedBlock) {
+                BlockPos safe = SafePosFinder.findSafeAround(level, slot.pos(), 3);
+                if (safe != null) {
+                    return toResult(new SpawnPoint(safe, slot.dimension(), slot.angle()), "bed_slot");
+                }
+            }
+        }
+
+        // Respawn anchor
+        Optional<SpawnSlot> anchorOpt = PlayerSpawnData.getSlot(player, SpawnSlotType.ANCHOR);
+        if (anchorOpt.isPresent() && anchorOpt.get().valid()) {
+            SpawnSlot slot = anchorOpt.get();
+            ServerLevel level = server.getLevel(slot.dimension());
+            if (level != null && RespawnAnchorBlock.canSetSpawn(level)) {
+                BlockState state = level.getBlockState(slot.pos());
+                if (state.getBlock() instanceof RespawnAnchorBlock
+                        && state.getValue(RespawnAnchorBlock.CHARGE) > 0) {
+                    BlockPos safe = SafePosFinder.findSafeAround(level, slot.pos(), 3);
+                    if (safe != null) {
+                        return toResult(new SpawnPoint(safe, slot.dimension(), slot.angle()), "anchor_slot");
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // ------------------------------------------------------------------
+    // World default spawn
+    // ------------------------------------------------------------------
+
+    private static ResolveResult worldSpawnResult(MinecraftServer server, ResourceKey<Level> dimension) {
+        ServerLevel level = server.getLevel(dimension);
+        WorldSpawnData data = WorldSpawnData.get(server);
+        Optional<SpawnPoint> stored = data.get(dimension);
+
+        SpawnPoint point;
+        if (dimension.equals(Level.OVERWORLD) && level != null) {
+            // /setworldspawn writes level.dat directly; prefer vanilla data so the vanilla command also works.
+            BlockPos vanillaPos = level.getLevelData().getSpawnPos();
+            float vanillaAngle = level.getLevelData().getSpawnAngle();
+            if (stored.isEmpty()
+                    || !stored.get().pos().equals(vanillaPos)
+                    || stored.get().angle() != vanillaAngle) {
+                point = new SpawnPoint(vanillaPos, dimension, vanillaAngle);
+            } else {
+                point = stored.get();
+            }
+        } else {
+            if (stored.isEmpty()) {
+                return null;
+            }
+            point = stored.get();
+        }
+
+        BlockPos safe = findSafe(level, point.pos());
+        if (safe == null) {
+            safe = point.pos();
+        }
+        return toResult(new SpawnPoint(safe, dimension, point.angle()), "world_spawn");
+    }
+
+    private static BlockPos findSafe(ServerLevel level, BlockPos pos) {
+        if (level == null || pos == null) {
+            return null;
+        }
+        if (SafePosFinder.isSafeStandingPosition(level, pos)) {
+            return pos;
+        }
+        return SafePosFinder.findSafeAround(level, pos, 3);
+    }
+
+    private static ResolveResult toResult(SpawnPoint point, String source) {
+        return new ResolveResult(point.pos(), point.dimension(), point.angle(), source, false,
+                0L, 0, 0, ResolveResult.Status.OK, List.of());
+    }
+}
