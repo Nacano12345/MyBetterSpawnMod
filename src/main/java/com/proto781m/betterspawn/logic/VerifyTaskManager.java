@@ -21,7 +21,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * is in liquid or the void, or drifted from the target. It does not use
  * {@code Thread.sleep}, so it never blocks the server thread.
  */
-@EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = BetterSpawn.MODID)
 public final class VerifyTaskManager {
 
     private static final List<Task> TASKS = new ArrayList<>();

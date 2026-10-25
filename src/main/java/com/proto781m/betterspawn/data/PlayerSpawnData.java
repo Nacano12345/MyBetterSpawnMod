@@ -8,7 +8,6 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -32,17 +31,17 @@ public final class PlayerSpawnData {
     public static CompoundTag root(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
         CompoundTag persisted;
-        if (persistent.contains(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, Tag.TAG_COMPOUND)) {
-            persisted = persistent.getCompound(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
+        if (persistent.contains(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG)) {
+            persisted = persistent.getCompoundOrEmpty(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
         } else {
             persisted = new CompoundTag();
             persistent.put(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, persisted);
         }
 
-        if (!persisted.contains(ROOT, Tag.TAG_COMPOUND)) {
+        if (!persisted.contains(ROOT)) {
             persisted.put(ROOT, new CompoundTag());
         }
-        return persisted.getCompound(ROOT);
+        return persisted.getCompoundOrEmpty(ROOT);
     }
 
     /**
@@ -55,8 +54,8 @@ public final class PlayerSpawnData {
     private static void saveRoot(ServerPlayer player, CompoundTag root) {
         CompoundTag persistent = player.getPersistentData();
         CompoundTag persisted;
-        if (persistent.contains(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, Tag.TAG_COMPOUND)) {
-            persisted = persistent.getCompound(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
+        if (persistent.contains(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG)) {
+            persisted = persistent.getCompoundOrEmpty(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
         } else {
             persisted = new CompoundTag();
             persistent.put(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, persisted);
@@ -69,14 +68,14 @@ public final class PlayerSpawnData {
     // ------------------------------------------------------------------
 
     public static Optional<SpawnPoint> getDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension) {
-        ListTag list = root(player).getList(KEY_DIM_SPAWNS, Tag.TAG_COMPOUND);
+        ListTag list = root(player).getListOrEmpty(KEY_DIM_SPAWNS);
         String id = DimensionUtil.id(dimension);
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
-            if (t.getString("dim").equals(id)) {
-                BlockPos pos = new BlockPos(t.getInt("x"), t.getInt("y"), t.getInt("z"));
+            CompoundTag t = list.getCompoundOrEmpty(i);
+            if (t.getStringOr("dim", "").equals(id)) {
+                BlockPos pos = new BlockPos(t.getIntOr("x", 0), t.getIntOr("y", 0), t.getIntOr("z", 0));
                 // Important: store the dimension; otherwise it defaults to the Overworld.
-                return Optional.of(new SpawnPoint(pos, dimension, t.getFloat("angle")));
+                return Optional.of(new SpawnPoint(pos, dimension, t.getFloatOr("angle", 0.0F)));
             }
         }
         return Optional.empty();
@@ -84,13 +83,13 @@ public final class PlayerSpawnData {
 
     public static Map<ResourceKey<Level>, SpawnPoint> getAllDimensionSpawns(ServerPlayer player) {
         Map<ResourceKey<Level>, SpawnPoint> result = new HashMap<>();
-        ListTag list = root(player).getList(KEY_DIM_SPAWNS, Tag.TAG_COMPOUND);
+        ListTag list = root(player).getListOrEmpty(KEY_DIM_SPAWNS);
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
+            CompoundTag t = list.getCompoundOrEmpty(i);
             try {
-                ResourceKey<Level> dimension = DimensionUtil.parse(t.getString("dim"));
-                BlockPos pos = new BlockPos(t.getInt("x"), t.getInt("y"), t.getInt("z"));
-                result.put(dimension, new SpawnPoint(pos, dimension, t.getFloat("angle")));
+                ResourceKey<Level> dimension = DimensionUtil.parse(t.getStringOr("dim", ""));
+                BlockPos pos = new BlockPos(t.getIntOr("x", 0), t.getIntOr("y", 0), t.getIntOr("z", 0));
+                result.put(dimension, new SpawnPoint(pos, dimension, t.getFloatOr("angle", 0.0F)));
             } catch (Exception ignored) {
                 // Skip corrupted entries
             }
@@ -101,13 +100,13 @@ public final class PlayerSpawnData {
     public static void setDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension,
                                          BlockPos pos, float angle) {
         CompoundTag root = root(player);
-        ListTag list = root.getList(KEY_DIM_SPAWNS, Tag.TAG_COMPOUND);
+        ListTag list = root.getListOrEmpty(KEY_DIM_SPAWNS);
         ListTag updated = new ListTag();
         boolean found = false;
         String id = DimensionUtil.id(dimension);
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
-            if (t.getString("dim").equals(id)) {
+            CompoundTag t = list.getCompoundOrEmpty(i);
+            if (t.getStringOr("dim", "").equals(id)) {
                 found = true;
                 updated.add(writeDimensionSpawn(dimension, pos, angle));
             } else {
@@ -120,17 +119,17 @@ public final class PlayerSpawnData {
         root.put(KEY_DIM_SPAWNS, updated);
         saveRoot(player, root);
         BetterSpawn.diag("Set personal world spawn for {} in {} at {} angle={}",
-                player.getScoreboardName(), dimension.location(), pos, angle);
+                player.getScoreboardName(), dimension.identifier(), pos, angle);
     }
 
     public static void clearDimensionSpawn(ServerPlayer player, ResourceKey<Level> dimension) {
         CompoundTag root = root(player);
-        ListTag list = root.getList(KEY_DIM_SPAWNS, Tag.TAG_COMPOUND);
+        ListTag list = root.getListOrEmpty(KEY_DIM_SPAWNS);
         ListTag updated = new ListTag();
         String id = DimensionUtil.id(dimension);
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag t = list.getCompound(i);
-            if (!t.getString("dim").equals(id)) {
+            CompoundTag t = list.getCompoundOrEmpty(i);
+            if (!t.getStringOr("dim", "").equals(id)) {
                 updated.add(t);
             }
         }
@@ -154,10 +153,10 @@ public final class PlayerSpawnData {
 
     public static Optional<SpawnSlot> getSlot(ServerPlayer player, SpawnSlotType type) {
         CompoundTag root = root(player);
-        if (!root.contains(type.name(), Tag.TAG_COMPOUND)) {
+        if (!root.contains(type.name())) {
             return Optional.empty();
         }
-        return Optional.ofNullable(SpawnSlotSerializer.read(root.getCompound(type.name())));
+        return Optional.ofNullable(SpawnSlotSerializer.read(root.getCompoundOrEmpty(type.name())));
     }
 
     public static Map<SpawnSlotType, SpawnSlot> getSlots(ServerPlayer player) {
@@ -187,7 +186,7 @@ public final class PlayerSpawnData {
     // ------------------------------------------------------------------
 
     public static boolean hasInitialDimensionApplied(ServerPlayer player) {
-        return root(player).getBoolean(KEY_INITIAL_DIMENSION);
+        return root(player).getBooleanOr(KEY_INITIAL_DIMENSION, false);
     }
 
     public static void setInitialDimensionApplied(ServerPlayer player) {

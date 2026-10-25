@@ -2,7 +2,7 @@ package com.proto781m.betterspawn.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -19,7 +19,7 @@ public final class PlatformBuilder {
     /** Resolves a block ID, falling back to stone for invalid IDs or air. */
     public static BlockState resolveState(String materialId) {
         try {
-            Block block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(materialId))
+            Block block = BuiltInRegistries.BLOCK.get(Identifier.parse(materialId))
                     .map(holder -> holder.value())
                     .orElse(null);
             if (block == null || block == Blocks.AIR) {

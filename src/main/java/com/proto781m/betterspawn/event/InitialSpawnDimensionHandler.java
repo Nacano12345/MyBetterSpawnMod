@@ -26,7 +26,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
  * run only once. It only applies to single-player or LAN hosts because the selection
  * comes from the create-world screen.
  */
-@EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = BetterSpawn.MODID)
 public final class InitialSpawnDimensionHandler {
 
     private InitialSpawnDimensionHandler() {
@@ -40,7 +40,7 @@ public final class InitialSpawnDimensionHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return;
         }
@@ -63,13 +63,13 @@ public final class InitialSpawnDimensionHandler {
         ServerLevel target = server.getLevel(dimension);
         if (target == null) {
             BetterSpawn.LOGGER.warn("Spawn dimension {} is not loaded; keeping overworld",
-                    dimension.location());
+                    dimension.identifier());
             return;
         }
         SpawnPoint point = data.get(dimension).orElse(null);
         if (point == null) {
             BetterSpawn.LOGGER.warn("No default spawn stored for {}; keeping overworld",
-                    dimension.location());
+                    dimension.identifier());
             return;
         }
 
@@ -84,9 +84,9 @@ public final class InitialSpawnDimensionHandler {
                     point.pos().getX() + 0.5, point.pos().getY(), point.pos().getZ() + 0.5,
                     point.angle(), player.getXRot());
             player.sendSystemMessage(Component.translatable(
-                    "betterspawn.msg.initial_dimension", dimension.location().toString()));
+                    "betterspawn.msg.initial_dimension", dimension.identifier().toString()));
             BetterSpawn.diag("Initial spawn dimension: teleported {} to {} at {}",
-                    player.getScoreboardName(), dimension.location(), point.pos());
+                    player.getScoreboardName(), dimension.identifier(), point.pos());
         });
     }
 }

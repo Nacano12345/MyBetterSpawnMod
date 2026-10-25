@@ -8,7 +8,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /** Registers all custom commands under {@code /betterspawn}. */
-@EventBusSubscriber(modid = com.proto781m.betterspawn.BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = com.proto781m.betterspawn.BetterSpawn.MODID)
 public final class CommandRegistrationHandler {
 
     private CommandRegistrationHandler() {

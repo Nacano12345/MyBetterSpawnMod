@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -29,7 +30,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerSetSpawnEvent;
  * <p>The block type at {@code newSpawn} determines whether this is a bed, an anchor,
  * or a regular command point.
  */
-@EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = BetterSpawn.MODID)
 public final class PlayerSpawnSlotHandler {
 
     private PlayerSpawnSlotHandler() {
@@ -50,7 +51,7 @@ public final class PlayerSpawnSlotHandler {
         }
 
         ResourceKey<Level> dimension = event.getSpawnLevel();
-        ServerLevel level = player.getServer() == null ? null : player.getServer().getLevel(dimension);
+        ServerLevel level = player.level().getServer() == null ? null : player.level().getServer().getLevel(dimension);
         if (level == null) {
             return;
         }
@@ -58,12 +59,12 @@ public final class PlayerSpawnSlotHandler {
         BlockState state = level.getBlockState(pos);
         SpawnSlotType type;
         if (state.getBlock() instanceof BedBlock) {
-            if (!BedBlock.canSetSpawn(level)) {
+            if (!level.environmentAttributes().getValue(EnvironmentAttributes.BED_RULE, pos).canSetSpawn(level)) {
                 return;
             }
             type = SpawnSlotType.BED;
         } else if (state.getBlock() instanceof RespawnAnchorBlock) {
-            if (!RespawnAnchorBlock.canSetSpawn(level)) {
+            if (!RespawnAnchorBlock.canSetSpawn(level, pos)) {
                 return;
             }
             type = SpawnSlotType.ANCHOR;
@@ -73,6 +74,6 @@ public final class PlayerSpawnSlotHandler {
 
         PlayerSpawnData.setSlot(player, SpawnSlot.valid(type, dimension, pos, player.getYRot()));
         BetterSpawn.diag("Recorded {} spawn slot for {} at {} in {}",
-                type, player.getScoreboardName(), pos, dimension.location());
+                type, player.getScoreboardName(), pos, dimension.identifier());
     }
 }

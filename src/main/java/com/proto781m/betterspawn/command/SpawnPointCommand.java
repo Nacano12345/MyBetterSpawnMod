@@ -20,7 +20,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.LevelData;
 
 /**
  * {@code /betterspawn spawnpoint} subcommands (slot-based variant).
@@ -37,7 +39,7 @@ public final class SpawnPointCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("spawnpoint")
-                .requires(src -> src.hasPermission(2));
+                .requires(src -> src.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER));
 
         // /betterspawn spawnpoint set <targets> [<pos>] [<angle>] [<dimension>]
         root.then(CommandSupport.targetPositionCommand("set",
@@ -93,7 +95,8 @@ public final class SpawnPointCommand {
 
             if (BetterSpawnConfig.SYNC_VANILLA_NBT.get()) {
                 // forced=true so non-bed/non-anchor coordinates are also written to vanilla NBT
-                target.setRespawnPosition(actualDimension, actualPos, actualAngle, true, true);
+                target.setRespawnPosition(new ServerPlayer.RespawnConfig(
+                        LevelData.RespawnData.of(actualDimension, actualPos, actualAngle, 0.0F), true), true);
                 // setRespawnPosition triggers PlayerSpawnSlotHandler, which overwrites the slot with the player's current yaw;
                 // Write it again here so an explicit angle takes effect.
                 PlayerSpawnData.setSlot(target, SpawnSlot.valid(
@@ -122,9 +125,9 @@ public final class SpawnPointCommand {
                     ? dimension
                     : target.level().dimension();
 
-            ServerLevel level = target.getServer() == null
+            ServerLevel level = target.level().getServer() == null
                     ? null
-                    : target.getServer().getLevel(actualDimension);
+                    : target.level().getServer().getLevel(actualDimension);
             if (level == null || !matchesSlotBlock(level, actualPos, type)) {
                 invalid++;
                 continue;
@@ -157,10 +160,11 @@ public final class SpawnPointCommand {
     private static boolean matchesSlotBlock(ServerLevel level, BlockPos pos, SpawnSlotType type) {
         BlockState state = level.getBlockState(pos);
         if (type == SpawnSlotType.BED) {
-            return BedBlock.canSetSpawn(level) && state.getBlock() instanceof BedBlock;
+            return level.environmentAttributes().getValue(EnvironmentAttributes.BED_RULE, pos).canSetSpawn(level)
+                    && state.getBlock() instanceof BedBlock;
         }
         if (type == SpawnSlotType.ANCHOR) {
-            return RespawnAnchorBlock.canSetSpawn(level)
+            return RespawnAnchorBlock.canSetSpawn(level, pos)
                     && state.getBlock() instanceof RespawnAnchorBlock
                     && state.getValue(RespawnAnchorBlock.CHARGE) > 0;
         }
@@ -198,7 +202,7 @@ public final class SpawnPointCommand {
         } else {
             dimensionSpawns.forEach((dimension, point) -> message
                     .append(Component.translatable("betterspawn.msg.spawnpoint.query.dim",
-                            dimension.location().toString(), point.pos().toString(),
+                            dimension.identifier().toString(), point.pos().toString(),
                             String.valueOf(point.angle())))
                     .append(Component.literal("\n")));
         }
@@ -212,7 +216,7 @@ public final class SpawnPointCommand {
                         .append(Component.literal("\n"));
             } else {
                 message.append(Component.translatable("betterspawn.msg.spawnpoint.query.slot",
-                                String.valueOf(type), slot.dimension().location().toString(),
+                                String.valueOf(type), slot.dimension().identifier().toString(),
                                 slot.pos().toString(), String.valueOf(slot.angle()),
                                 String.valueOf(slot.valid())))
                         .append(Component.literal("\n"));

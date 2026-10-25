@@ -6,7 +6,7 @@ import com.google.gson.JsonPrimitive;
 import com.proto781m.betterspawn.BetterSpawn;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * Parses a JSON element into a {@link SpawnRule}.
@@ -19,7 +19,7 @@ public final class SpawnTemplateLoader {
     private SpawnTemplateLoader() {
     }
 
-    public static SpawnRule load(ResourceLocation id, JsonElement element) {
+    public static SpawnRule load(Identifier id, JsonElement element) {
         try {
             JsonObject obj = element.getAsJsonObject();
             if (!obj.has("dimension")) {
@@ -29,7 +29,7 @@ public final class SpawnTemplateLoader {
                 throw new IllegalArgumentException("Missing method field");
             }
 
-            ResourceLocation dimension = ResourceLocation.parse(obj.get("dimension").getAsString());
+            Identifier dimension = Identifier.parse(obj.get("dimension").getAsString());
             String method = obj.get("method").getAsString();
             Map<String, Object> params = parseParams(obj.getAsJsonObject("parameters"));
             String fallback = obj.has("fallback") && !obj.get("fallback").isJsonNull()

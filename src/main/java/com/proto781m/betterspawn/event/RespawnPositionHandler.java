@@ -22,7 +22,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerRespawnPositionEvent;
  * <p>The {@link TeleportTransition} is modified only when a position is resolved;
  * otherwise vanilla behavior is preserved.
  */
-@EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = BetterSpawn.MODID)
 public final class RespawnPositionHandler {
 
     private RespawnPositionHandler() {
@@ -33,7 +33,7 @@ public final class RespawnPositionHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return;
         }
@@ -66,7 +66,7 @@ public final class RespawnPositionHandler {
         // Keep the vanilla bed/anchor NBT so those slots can still participate in the next respawn priority check.
         event.setCopyOriginalSpawnPosition(true);
         BetterSpawn.diag("Respawn {} in {} -> {} at {} in {}",
-                player.getScoreboardName(), deathDimension.location(), result.usedMethod(),
-                spawnPos, targetDimension.location());
+                player.getScoreboardName(), deathDimension.identifier(), result.usedMethod(),
+                spawnPos, targetDimension.identifier());
     }
 }

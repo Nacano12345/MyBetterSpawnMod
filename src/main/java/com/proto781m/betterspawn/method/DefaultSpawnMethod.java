@@ -10,7 +10,7 @@ import com.proto781m.betterspawn.resolver.TerrainScanner;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.PlayerRespawnLogic;
+import net.minecraft.server.level.PlayerSpawnFinder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
@@ -138,7 +138,7 @@ public class DefaultSpawnMethod implements SpawnMethod {
                             return null;
                         }
 
-                        BlockPos pos = PlayerRespawnLogic.getSpawnPosInChunk(level,
+                        BlockPos pos = PlayerSpawnFinder.getSpawnPosInChunk(level,
                                 new ChunkPos(origin.x + dx, origin.z + dz));
                         if (pos != null && pos.getY() >= minSurfaceY
                                 && SpawnSafetyValidator.isSafe(level, pos)) {

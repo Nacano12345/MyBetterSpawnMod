@@ -36,7 +36,7 @@ public final class SpawnSlotSerializer {
     public static CompoundTag write(SpawnSlot slot) {
         CompoundTag tag = new CompoundTag();
         tag.putString(KEY_TYPE, slot.type().name());
-        tag.putString(KEY_DIM, slot.dimension().location().toString());
+        tag.putString(KEY_DIM, slot.dimension().identifier().toString());
         tag.putInt(KEY_X, slot.pos().getX());
         tag.putInt(KEY_Y, slot.pos().getY());
         tag.putInt(KEY_Z, slot.pos().getZ());
@@ -47,17 +47,17 @@ public final class SpawnSlotSerializer {
     public static SpawnSlot read(CompoundTag tag) {
         SpawnSlotType type;
         try {
-            type = SpawnSlotType.valueOf(tag.getString(KEY_TYPE));
+            type = SpawnSlotType.valueOf(tag.getStringOr(KEY_TYPE, ""));
         } catch (IllegalArgumentException ex) {
             return null;
         }
         ResourceKey<Level> dim;
         try {
-            dim = com.proto781m.betterspawn.util.DimensionUtil.parse(tag.getString(KEY_DIM));
+            dim = com.proto781m.betterspawn.util.DimensionUtil.parse(tag.getStringOr(KEY_DIM, ""));
         } catch (Exception ex) {
             return null;
         }
-        BlockPos pos = new BlockPos(tag.getInt(KEY_X), tag.getInt(KEY_Y), tag.getInt(KEY_Z));
-        return SpawnSlot.valid(type, dim, pos, tag.getFloat(KEY_ANGLE));
+        BlockPos pos = new BlockPos(tag.getIntOr(KEY_X, 0), tag.getIntOr(KEY_Y, 0), tag.getIntOr(KEY_Z, 0));
+        return SpawnSlot.valid(type, dim, pos, tag.getFloatOr(KEY_ANGLE, 0.0F));
     }
 }

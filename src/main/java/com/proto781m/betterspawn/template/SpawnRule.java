@@ -3,7 +3,7 @@ package com.proto781m.betterspawn.template;
 import java.util.Map;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
 /**
@@ -21,7 +21,7 @@ import net.minecraft.world.level.Level;
  * @param fallbackParameters fallback method parameters
  */
 public record SpawnRule(
-        ResourceLocation dimension,
+        Identifier dimension,
         String method,
         Map<String, Object> parameters,
         String fallback,

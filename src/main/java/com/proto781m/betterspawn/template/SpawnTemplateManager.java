@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
 /**
@@ -20,7 +20,7 @@ import net.minecraft.world.level.Level;
  * templates for the same dimension.
  *
  * <p>Built-in templates are installed when the class loads, so
- * {@link #get(ResourceLocation)} never returns empty before the server finishes a
+ * {@link #get(Identifier)} never returns empty before the server finishes a
  * datapack reload. Missing built-ins were another cause of the early platform fallback
  * during {@code ServerAboutToStartEvent}.
  *
@@ -30,21 +30,21 @@ import net.minecraft.world.level.Level;
 public final class SpawnTemplateManager {
 
     /** Built-in default templates for the three vanilla dimensions; datapacks may override them. */
-    private static final Map<ResourceLocation, SpawnRule> BUILTIN_DEFAULTS =
+    private static final Map<Identifier, SpawnRule> BUILTIN_DEFAULTS =
             Map.copyOf(createBuiltinDefaults());
 
     /** Currently active rules: built-ins plus datapack overrides. Replaced atomically for safe reads. */
-    private static volatile Map<ResourceLocation, SpawnRule> rules = BUILTIN_DEFAULTS;
+    private static volatile Map<Identifier, SpawnRule> rules = BUILTIN_DEFAULTS;
 
     private SpawnTemplateManager() {
     }
 
-    private static Map<ResourceLocation, SpawnRule> createBuiltinDefaults() {
-        Map<ResourceLocation, SpawnRule> defaults = new HashMap<>();
+    private static Map<Identifier, SpawnRule> createBuiltinDefaults() {
+        Map<Identifier, SpawnRule> defaults = new HashMap<>();
 
         // Overworld: default method
-        defaults.put(ResourceLocation.parse("minecraft:overworld"), new SpawnRule(
-                ResourceLocation.parse("minecraft:overworld"),
+        defaults.put(Identifier.parse("minecraft:overworld"), new SpawnRule(
+                Identifier.parse("minecraft:overworld"),
                 "default",
                 Map.of(
                         "center_x", 0,
@@ -61,8 +61,8 @@ public final class SpawnTemplateManager {
         ));
 
         // Nether: portal_type method (find a portal site; build a platform on failure)
-        defaults.put(ResourceLocation.parse("minecraft:the_nether"), new SpawnRule(
-                ResourceLocation.parse("minecraft:the_nether"),
+        defaults.put(Identifier.parse("minecraft:the_nether"), new SpawnRule(
+                Identifier.parse("minecraft:the_nether"),
                 "portal_type",
                 Map.ofEntries(
                         Map.entry("center_x", 0),
@@ -90,8 +90,8 @@ public final class SpawnTemplateManager {
         ));
 
         // End: fixed method (a fixed point outside the main island, with a platform fallback)
-        defaults.put(ResourceLocation.parse("minecraft:the_end"), new SpawnRule(
-                ResourceLocation.parse("minecraft:the_end"),
+        defaults.put(Identifier.parse("minecraft:the_end"), new SpawnRule(
+                Identifier.parse("minecraft:the_end"),
                 "fixed",
                 Map.of(
                         "x", 100, "y", 64, "z", 0,
@@ -113,11 +113,11 @@ public final class SpawnTemplateManager {
      * Called by the reload listener: replaces the whole rule table. Datapack rules take
      * precedence over built-ins.
      */
-    public static void reload(Map<ResourceLocation, JsonElement> data) {
-        Map<ResourceLocation, SpawnRule> parsed = new HashMap<>(BUILTIN_DEFAULTS);
+    public static void reload(Map<Identifier, JsonElement> data) {
+        Map<Identifier, SpawnRule> parsed = new HashMap<>(BUILTIN_DEFAULTS);
         int fromPack = 0;
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : data.entrySet()) {
+        for (Map.Entry<Identifier, JsonElement> entry : data.entrySet()) {
             SpawnRule rule = SpawnTemplateLoader.load(entry.getKey(), entry.getValue());
             if (rule != null) {
                 parsed.put(rule.dimension(), rule);
@@ -137,16 +137,16 @@ public final class SpawnTemplateManager {
         }
     }
 
-    public static Optional<SpawnRule> get(ResourceLocation dimension) {
+    public static Optional<SpawnRule> get(Identifier dimension) {
         return Optional.ofNullable(rules.get(dimension));
     }
 
     public static Optional<SpawnRule> get(String dimension) {
-        return get(ResourceLocation.parse(dimension));
+        return get(Identifier.parse(dimension));
     }
 
     public static Optional<SpawnRule> get(ResourceKey<Level> dimension) {
-        return get(dimension.location());
+        return get(dimension.identifier());
     }
 
     public static Collection<SpawnRule> all() {

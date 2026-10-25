@@ -24,6 +24,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -91,14 +92,14 @@ public final class SpawnPointResolver {
                     player.getScoreboardName(), point.pos());
         } else {
             BetterSpawn.diag("Respawn chain {}: no personal spawn for {}",
-                    player.getScoreboardName(), deathDimension.location());
+                    player.getScoreboardName(), deathDimension.identifier());
         }
 
         // Global default spawn of the death dimension
         ResolveResult world = worldSpawnResult(server, deathDimension);
         if (world != null) {
             BetterSpawn.diag("Respawn chain {}: world spawn {} at {}",
-                    player.getScoreboardName(), deathDimension.location(), world.pos());
+                    player.getScoreboardName(), deathDimension.identifier(), world.pos());
             return world;
         }
 
@@ -124,7 +125,7 @@ public final class SpawnPointResolver {
         if (level == null) {
             return ResolveResult.empty("no_level", ResolveResult.Status.EMPTY);
         }
-        Optional<SpawnRule> rule = SpawnTemplateManager.get(dimension.location());
+        Optional<SpawnRule> rule = SpawnTemplateManager.get(dimension.identifier());
         if (rule.isEmpty()) {
             return ResolveResult.empty("no_template", ResolveResult.Status.EMPTY);
         }
@@ -164,7 +165,8 @@ public final class SpawnPointResolver {
         if (bedOpt.isPresent() && bedOpt.get().valid()) {
             SpawnSlot slot = bedOpt.get();
             ServerLevel level = server.getLevel(slot.dimension());
-            if (level != null && BedBlock.canSetSpawn(level)
+            if (level != null && level.environmentAttributes()
+                    .getValue(EnvironmentAttributes.BED_RULE, slot.pos()).canSetSpawn(level)
                     && level.getBlockState(slot.pos()).getBlock() instanceof BedBlock) {
                 BlockPos safe = SafePosFinder.findSafeAround(level, slot.pos(), 3);
                 if (safe != null) {
@@ -178,7 +180,7 @@ public final class SpawnPointResolver {
         if (anchorOpt.isPresent() && anchorOpt.get().valid()) {
             SpawnSlot slot = anchorOpt.get();
             ServerLevel level = server.getLevel(slot.dimension());
-            if (level != null && RespawnAnchorBlock.canSetSpawn(level)) {
+            if (level != null && RespawnAnchorBlock.canSetSpawn(level, slot.pos())) {
                 BlockState state = level.getBlockState(slot.pos());
                 if (state.getBlock() instanceof RespawnAnchorBlock
                         && state.getValue(RespawnAnchorBlock.CHARGE) > 0) {
@@ -204,8 +206,8 @@ public final class SpawnPointResolver {
         SpawnPoint point;
         if (dimension.equals(Level.OVERWORLD) && level != null) {
             // /setworldspawn writes level.dat directly; prefer vanilla data so the vanilla command also works.
-            BlockPos vanillaPos = level.getLevelData().getSpawnPos();
-            float vanillaAngle = level.getLevelData().getSpawnAngle();
+            BlockPos vanillaPos = level.getLevelData().getRespawnData().pos();
+            float vanillaAngle = level.getLevelData().getRespawnData().yaw();
             if (stored.isEmpty()
                     || !stored.get().pos().equals(vanillaPos)
                     || stored.get().angle() != vanillaAngle) {

@@ -91,7 +91,7 @@ public class PlatformSpawnMethod implements SpawnMethod {
 
     private static com.proto781m.betterspawn.template.SpawnRule defaultRule(ServerLevel level) {
         return new com.proto781m.betterspawn.template.SpawnRule(
-                level.dimension().location(), "platform",
+                level.dimension().identifier(), "platform",
                 Map.of("x", 0, "y", 64, "z", 0, "size", 3, "material", "minecraft:stone"),
                 null, Map.of());
     }

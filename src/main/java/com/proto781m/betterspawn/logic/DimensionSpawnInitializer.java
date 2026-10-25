@@ -16,6 +16,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelData;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -38,7 +39,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
  * {@code ServerAboutToStartEvent}: chunks are not loaded yet and {@code getHeight}
  * returns {@code minBuildHeight}, making the world look empty.
  */
-@EventBusSubscriber(modid = BetterSpawn.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = BetterSpawn.MODID)
 public final class DimensionSpawnInitializer {
 
     private DimensionSpawnInitializer() {
@@ -69,12 +70,12 @@ public final class DimensionSpawnInitializer {
                 : Level.OVERWORLD;
         data.setSpawnDimension(selected);
 
-        event.getSettings().setSpawn(result.pos(), result.angle());
+        event.getSettings().setSpawn(LevelData.RespawnData.of(Level.OVERWORLD, result.pos(), result.angle(), 0.0F));
         event.setCanceled(true);
 
         BetterSpawn.LOGGER.info("Created overworld spawn at {} using '{}' (status={})",
                 result.pos(), result.usedMethod(), result.status());
-        BetterSpawn.LOGGER.info("New world spawn dimension: {}", selected.location());
+        BetterSpawn.LOGGER.info("New world spawn dimension: {}", selected.identifier());
     }
 
     @SubscribeEvent
@@ -96,7 +97,7 @@ public final class DimensionSpawnInitializer {
             // an admin used /setworldspawn later; preserve the level.dat choice during migration.
             Optional<SpawnPoint> legacy = data.get(Level.OVERWORLD);
             if (legacy.isPresent()) {
-                BlockPos vanilla = server.overworld().getLevelData().getSpawnPos();
+                BlockPos vanilla = server.overworld().getLevelData().getRespawnData().pos();
                 preserveOverworld = !legacy.get().pos().equals(vanilla);
             }
 
@@ -111,7 +112,7 @@ public final class DimensionSpawnInitializer {
         }
         if (data.spawnDimension() != null && server.getLevel(data.spawnDimension()) == null) {
             BetterSpawn.LOGGER.warn("Spawn dimension {} is not loaded; falling back to overworld",
-                    data.spawnDimension().location());
+                    data.spawnDimension().identifier());
             data.setSpawnDimension(Level.OVERWORLD);
         }
         data.setDirty();
@@ -125,8 +126,8 @@ public final class DimensionSpawnInitializer {
 
         if (stored.isEmpty()) {
             if (dimension.equals(Level.OVERWORLD) && preserveOverworld) {
-                BlockPos vanilla = level.getLevelData().getSpawnPos();
-                float vanillaAngle = level.getLevelData().getSpawnAngle();
+                BlockPos vanilla = level.getLevelData().getRespawnData().pos();
+                float vanillaAngle = level.getLevelData().getRespawnData().yaw();
                 data.set(dimension, vanilla, vanillaAngle, level);
                 BetterSpawn.LOGGER.info("Preserved overworld spawn from level.dat during migration: {}",
                         vanilla);
@@ -137,28 +138,28 @@ public final class DimensionSpawnInitializer {
             if (result.pos() != null) {
                 data.set(dimension, result.pos(), result.angle(), level);
                 BetterSpawn.LOGGER.info("Initialized spawn for {} at {} using '{}' (status={})",
-                        dimension.location(), result.pos(), result.usedMethod(), result.status());
+                        dimension.identifier(), result.pos(), result.usedMethod(), result.status());
                 return;
             }
 
             BetterSpawn.LOGGER.warn("Spawn template failed for {} (status={}), running platform fallback",
-                    dimension.location(), result.status());
+                    dimension.identifier(), result.status());
             ResolveResult platform = PlatformSpawnMethod.INSTANCE.resolve(platformContext(level));
             if (platform.pos() != null) {
                 data.set(dimension, platform.pos(), platform.angle(), level);
                 BetterSpawn.LOGGER.info("Initialized platform fallback for {} at {}",
-                        dimension.location(), platform.pos());
+                        dimension.identifier(), platform.pos());
             } else {
                 BetterSpawn.LOGGER.error("Platform fallback also failed for {}: {}",
-                        dimension.location(), platform.warnings());
+                        dimension.identifier(), platform.warnings());
             }
             return;
         }
 
         // Migration already cleared old data, so no sync is needed; on normal startup, let /setworldspawn affect the Overworld.
         if (!migrating && dimension.equals(Level.OVERWORLD)) {
-            BlockPos vanillaPos = level.getLevelData().getSpawnPos();
-            float vanillaAngle = level.getLevelData().getSpawnAngle();
+            BlockPos vanillaPos = level.getLevelData().getRespawnData().pos();
+            float vanillaAngle = level.getLevelData().getRespawnData().yaw();
             SpawnPoint point = stored.get();
             if (!point.pos().equals(vanillaPos) || point.angle() != vanillaAngle) {
                 data.set(dimension, vanillaPos, vanillaAngle, level);
@@ -191,7 +192,7 @@ public final class DimensionSpawnInitializer {
         data.set(dimension, result.pos(), result.angle(), level);
         data.setDirty();
         BetterSpawn.LOGGER.info("Regenerated spawn for {} at {} using '{}' (status={})",
-                dimension.location(), result.pos(), result.usedMethod(), result.status());
+                dimension.identifier(), result.pos(), result.usedMethod(), result.status());
         return true;
     }
 

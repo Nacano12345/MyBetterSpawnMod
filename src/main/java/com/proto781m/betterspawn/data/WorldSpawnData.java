@@ -6,10 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -44,31 +43,34 @@ public class WorldSpawnData extends SavedData {
     private int version = CURRENT_VERSION;
     private ResourceKey<Level> spawnDimension = Level.OVERWORLD;
 
+    public static final SavedDataType<WorldSpawnData> TYPE = new SavedDataType<>(
+            DATA_NAME,
+            WorldSpawnData::new,
+            CompoundTag.CODEC.xmap(WorldSpawnData::load, WorldSpawnData::save));
+
     public static WorldSpawnData get(MinecraftServer server) {
-        return server.overworld()
-                .getDataStorage()
-                .computeIfAbsent(new SavedData.Factory<>(WorldSpawnData::new, WorldSpawnData::load), DATA_NAME);
+        return server.overworld().getDataStorage().computeIfAbsent(TYPE);
     }
 
-    public static WorldSpawnData load(CompoundTag tag, HolderLookup.Provider registries) {
+    public static WorldSpawnData load(CompoundTag tag) {
         WorldSpawnData data = new WorldSpawnData();
-        data.version = tag.contains("version") ? tag.getInt("version") : 0;
+        data.version = tag.getIntOr("version", 0);
         if (tag.contains("spawn_dimension")) {
             try {
-                data.spawnDimension = DimensionUtil.parse(tag.getString("spawn_dimension"));
+                data.spawnDimension = DimensionUtil.parse(tag.getStringOr("spawn_dimension", "minecraft:overworld"));
             } catch (Exception ignored) {
                 data.spawnDimension = Level.OVERWORLD;
             }
         }
 
-        ListTag list = tag.getList("spawns", Tag.TAG_COMPOUND);
+        ListTag list = tag.getListOrEmpty("spawns");
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag entry = list.getCompound(i);
+            CompoundTag entry = list.getCompoundOrEmpty(i);
             try {
-                ResourceKey<Level> dimension = DimensionUtil.parse(entry.getString("dim"));
-                BlockPos pos = new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z"));
+                ResourceKey<Level> dimension = DimensionUtil.parse(entry.getStringOr("dim", ""));
+                BlockPos pos = new BlockPos(entry.getIntOr("x", 0), entry.getIntOr("y", 0), entry.getIntOr("z", 0));
                 // The dimension must be stored; older code defaulted to the Overworld and broke cross-dimension respawns.
-                data.spawns.put(dimension, new SpawnPoint(pos, dimension, entry.getFloat("angle")));
+                data.spawns.put(dimension, new SpawnPoint(pos, dimension, entry.getFloatOr("angle", 0.0F)));
             } catch (Exception ignored) {
                 // Skip corrupted entries so the entire SavedData load does not fail.
             }
@@ -76,8 +78,8 @@ public class WorldSpawnData extends SavedData {
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
         tag.putInt("version", version);
         tag.putString("spawn_dimension", DimensionUtil.id(spawnDimension));
         ListTag list = new ListTag();

@@ -36,7 +36,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -78,7 +78,7 @@ public final class GotoDimCommand {
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildRoot() {
         return Commands.literal("gotodim")
-                .requires(src -> BetterSpawnConfig.ENABLE_GOTODIM.get() && src.hasPermission(0))
+                .requires(src -> BetterSpawnConfig.ENABLE_GOTODIM.get())
                 .executes(ctx -> run(ctx, null, ""))
                 .then(Commands.argument("args", StringArgumentType.greedyString())
                         .suggests(GotoDimCommand::suggestArgs)
@@ -115,7 +115,7 @@ public final class GotoDimCommand {
                 || token.startsWith("\"") || token.startsWith("'")) {
             return null;
         }
-        ResourceLocation id = ResourceLocation.tryParse(token);
+        Identifier id = Identifier.tryParse(token);
         if (id == null || server == null) {
             return null;
         }
@@ -145,7 +145,7 @@ public final class GotoDimCommand {
                 : ctx.getSource().getLevel().dimension();
         ServerLevel level = server.getLevel(target);
         if (level == null) {
-            ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.dimension_missing", target.location().toString()));
+            ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.dimension_missing", target.identifier().toString()));
             return 0;
         }
         return runOne(ctx, level, options, true);
@@ -310,7 +310,7 @@ public final class GotoDimCommand {
         List<String> dimensions = new ArrayList<>();
         if (!hasDimension && server != null) {
             server.registryAccess().lookupOrThrow(Registries.DIMENSION).keySet().stream()
-                    .map(ResourceLocation::toString)
+                    .map(Identifier::toString)
                     .forEach(dimensions::add);
         }
 
@@ -390,7 +390,7 @@ public final class GotoDimCommand {
         boolean verify = allowTeleport && "verify".equals(options.mode);
 
         if (teleport) {
-            if (!ctx.getSource().hasPermission(2)) {
+            if (!ctx.getSource().permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)) {
                 ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.gotodim.no_permission"));
                 return 0;
             }
@@ -400,10 +400,10 @@ public final class GotoDimCommand {
             }
         }
 
-        SpawnRule base = SpawnTemplateManager.get(level.dimension().location()).orElse(null);
+        SpawnRule base = SpawnTemplateManager.get(level.dimension().identifier()).orElse(null);
         if (base == null) {
             ctx.getSource().sendFailure(Component.translatable("betterspawn.msg.gotodim.no_template",
-                    level.dimension().location().toString()));
+                    level.dimension().identifier().toString()));
             return 0;
         }
         SpawnRule rule = applyOverrides(level, base, options);
@@ -453,7 +453,7 @@ public final class GotoDimCommand {
             long avgTime = totalTime / total;
             long avgSamples = totalSamples / total;
             ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.repeat_header",
-                    level.dimension().location().toString(), String.valueOf(total)));
+                    level.dimension().identifier().toString(), String.valueOf(total)));
             ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.success_rate",
                     String.format("%.1f%%", successCount * 100.0 / total),
                     String.format("%.1f%%", fallbackCount * 100.0 / total)));
@@ -555,7 +555,7 @@ public final class GotoDimCommand {
      */
     private static Optional<BlockPos> currentProbeCenter(ServerLevel level) {
         if (level.dimension().equals(Level.OVERWORLD)) {
-            return Optional.of(level.getLevelData().getSpawnPos());
+            return Optional.of(level.getLevelData().getRespawnData().pos());
         }
         return WorldSpawnData.get(level.getServer())
                 .get(level.dimension())
@@ -580,7 +580,7 @@ public final class GotoDimCommand {
                 pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
                 result.angle(), player.getXRot());
         ctx.getSource().sendSystemMessage(Component.translatable("betterspawn.msg.gotodim.teleported",
-                pos.toString(), targetLevel.dimension().location().toString()));
+                pos.toString(), targetLevel.dimension().identifier().toString()));
 
         if (verify) {
             // After a cross-dimension teleport, the client needs time to load chunks; wait 3 seconds before verifying.
@@ -599,7 +599,7 @@ public final class GotoDimCommand {
         };
 
         ctx.getSource().sendSystemMessage(Component.translatable(
-                "betterspawn.msg.gotodim.result.header", level.dimension().location().toString()));
+                "betterspawn.msg.gotodim.result.header", level.dimension().identifier().toString()));
 
         net.minecraft.network.chat.MutableComponent methodName =
                 Component.literal(result.usedMethod());
@@ -642,7 +642,7 @@ public final class GotoDimCommand {
             }
         }
         BetterSpawn.diag("gotodim {} -> method={}, status={}, pos={}, elapsed={}ms, samples={}",
-                level.dimension().location(), result.usedMethod(), result.status(),
+                level.dimension().identifier(), result.usedMethod(), result.status(),
                 result.pos(), result.elapsedMillis(), result.samples());
     }
 

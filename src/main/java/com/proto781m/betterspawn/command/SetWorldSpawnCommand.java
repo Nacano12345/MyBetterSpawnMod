@@ -42,7 +42,7 @@ public final class SetWorldSpawnCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("worldspawn")
-                .requires(src -> src.hasPermission(2));
+                .requires(src -> src.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER));
 
         // /betterspawn worldspawn global [<pos>] [<angle>] [<dimension>]
         root.then(CommandSupport.positionCommand("global",
@@ -121,13 +121,13 @@ public final class SetWorldSpawnCommand {
         ServerLevel level = server.getLevel(dimension);
         if (level == null) {
             ctx.getSource().sendFailure(Component.translatable(
-                    "betterspawn.msg.dimension_missing", dimension.location().toString()));
+                    "betterspawn.msg.dimension_missing", dimension.identifier().toString()));
             return 0;
         }
 
         WorldSpawnData.get(server).set(dimension, pos, angle, level);
         Component message = Component.translatable("betterspawn.msg.worldspawn.set",
-                dimension.location().toString(), pos.toString(), String.valueOf(angle));
+                dimension.identifier().toString(), pos.toString(), String.valueOf(angle));
         ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
@@ -149,7 +149,7 @@ public final class SetWorldSpawnCommand {
         }
 
         Component dimensionName = dimension != null
-                ? Component.literal(dimension.location().toString())
+                ? Component.literal(dimension.identifier().toString())
                 : Component.translatable("betterspawn.msg.current_dimension");
         Component message = Component.translatable("betterspawn.msg.worldspawn.player.set",
                 String.valueOf(changed), dimensionName);
@@ -160,7 +160,7 @@ public final class SetWorldSpawnCommand {
     private static int execClearGlobal(CommandContext<CommandSourceStack> ctx, ResourceKey<Level> dimension) {
         WorldSpawnData.get(ctx.getSource().getServer()).clear(dimension);
         Component message = Component.translatable("betterspawn.msg.worldspawn.global.clear",
-                dimension.location().toString());
+                dimension.identifier().toString());
         ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
@@ -171,7 +171,7 @@ public final class SetWorldSpawnCommand {
             PlayerSpawnData.clearDimensionSpawn(target, dimension);
         }
         Component message = Component.translatable("betterspawn.msg.worldspawn.player.clear",
-                String.valueOf(targets.size()), dimension.location().toString());
+                String.valueOf(targets.size()), dimension.identifier().toString());
         ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
@@ -185,21 +185,21 @@ public final class SetWorldSpawnCommand {
         BlockPos pos;
         float angle;
         if (dimension.equals(Level.OVERWORLD) && level != null) {
-            pos = level.getLevelData().getSpawnPos();
-            angle = level.getLevelData().getSpawnAngle();
+            pos = level.getLevelData().getRespawnData().pos();
+            angle = level.getLevelData().getRespawnData().yaw();
         } else if (entry.isPresent()) {
             pos = entry.get().pos();
             angle = entry.get().angle();
         } else {
             ctx.getSource().sendFailure(Component.translatable(
-                    "betterspawn.msg.worldspawn.global.none", dimension.location().toString()));
+                    "betterspawn.msg.worldspawn.global.none", dimension.identifier().toString()));
             return 0;
         }
 
         BlockPos finalPos = pos;
         float finalAngle = angle;
         Component message = Component.translatable("betterspawn.msg.worldspawn.global.query",
-                dimension.location().toString(), finalPos.toString(), String.valueOf(finalAngle));
+                dimension.identifier().toString(), finalPos.toString(), String.valueOf(finalAngle));
         ctx.getSource().sendSuccess(() -> message, false);
         return 1;
     }
@@ -209,13 +209,13 @@ public final class SetWorldSpawnCommand {
         var entry = PlayerSpawnData.getDimensionSpawn(target, dimension);
         if (entry.isEmpty()) {
             Component message = Component.translatable("betterspawn.msg.worldspawn.player.none",
-                    target.getScoreboardName(), dimension.location().toString());
+                    target.getScoreboardName(), dimension.identifier().toString());
             ctx.getSource().sendSuccess(() -> message, false);
             return 0;
         }
         var point = entry.get();
         Component message = Component.translatable("betterspawn.msg.worldspawn.player.query",
-                target.getScoreboardName(), dimension.location().toString(),
+                target.getScoreboardName(), dimension.identifier().toString(),
                 point.pos().toString(), String.valueOf(point.angle()));
         ctx.getSource().sendSuccess(() -> message, false);
         return 1;
@@ -225,15 +225,15 @@ public final class SetWorldSpawnCommand {
         boolean ok = DimensionSpawnInitializer.regenerate(ctx.getSource().getServer(), dimension);
         if (!ok) {
             ctx.getSource().sendFailure(Component.translatable(
-                    "betterspawn.msg.worldspawn.regenerate.fail", dimension.location().toString()));
+                    "betterspawn.msg.worldspawn.regenerate.fail", dimension.identifier().toString()));
             return 0;
         }
         var point = WorldSpawnData.get(ctx.getSource().getServer()).get(dimension);
         Component message = point.map(p -> (Component) Component.translatable(
                         "betterspawn.msg.worldspawn.regenerate.ok",
-                        dimension.location().toString(), p.pos().toString(), String.valueOf(p.angle())))
+                        dimension.identifier().toString(), p.pos().toString(), String.valueOf(p.angle())))
                 .orElseGet(() -> Component.translatable("betterspawn.msg.worldspawn.regenerate.ok_no_pos",
-                        dimension.location().toString()));
+                        dimension.identifier().toString()));
         ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
@@ -243,12 +243,12 @@ public final class SetWorldSpawnCommand {
         MinecraftServer server = ctx.getSource().getServer();
         if (server.getLevel(dimension) == null) {
             ctx.getSource().sendFailure(Component.translatable(
-                    "betterspawn.msg.dimension_missing", dimension.location().toString()));
+                    "betterspawn.msg.dimension_missing", dimension.identifier().toString()));
             return 0;
         }
         WorldSpawnData.get(server).setSpawnDimension(dimension);
         Component message = Component.translatable("betterspawn.msg.spawn_dimension.set",
-                dimension.location().toString());
+                dimension.identifier().toString());
         ctx.getSource().sendSuccess(() -> message, true);
         return 1;
     }
@@ -256,7 +256,7 @@ public final class SetWorldSpawnCommand {
     private static int execQuerySpawnDimension(CommandContext<CommandSourceStack> ctx) {
         ResourceKey<Level> dimension = WorldSpawnData.get(ctx.getSource().getServer()).spawnDimension();
         Component message = Component.translatable("betterspawn.msg.spawn_dimension.query",
-                dimension.location().toString());
+                dimension.identifier().toString());
         ctx.getSource().sendSuccess(() -> message, false);
         return 1;
     }

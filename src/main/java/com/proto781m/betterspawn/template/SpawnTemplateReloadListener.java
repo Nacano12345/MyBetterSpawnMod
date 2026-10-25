@@ -3,7 +3,7 @@ package com.proto781m.betterspawn.template;
 import com.google.gson.JsonElement;
 import java.util.Map;
 import net.minecraft.resources.FileToIdConverter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.ExtraCodecs;
@@ -22,7 +22,7 @@ public class SpawnTemplateReloadListener extends SimpleJsonResourceReloadListene
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> data, ResourceManager resourceManager,
+    protected void apply(Map<Identifier, JsonElement> data, ResourceManager resourceManager,
                          ProfilerFiller profiler) {
         SpawnTemplateManager.reload(data);
     }

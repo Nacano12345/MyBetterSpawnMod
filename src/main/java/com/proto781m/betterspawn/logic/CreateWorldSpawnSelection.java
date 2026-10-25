@@ -42,8 +42,8 @@ public final class CreateWorldSpawnSelection {
 
     /** Dimension display name, using the mod's {@code betterspawn.dimension.*} translation keys. */
     public static Component displayName(ResourceKey<Level> dimension) {
-        String key = "betterspawn.dimension." + dimension.location().getPath();
-        return Component.translatableWithFallback(key, dimension.location().toString());
+        String key = "betterspawn.dimension." + dimension.identifier().getPath();
+        return Component.translatableWithFallback(key, dimension.identifier().toString());
     }
 
     public static Component displayName() {
