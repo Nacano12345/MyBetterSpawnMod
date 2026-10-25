@@ -39,7 +39,7 @@ kept in the **[Wiki](https://github.com/Nacano12345/MyBetterSpawnMod/wiki)**:
 
 ## Status
 
-Source is available and builds as `betterspawn-1.0.0.jar`. Some features are experimental;
+Source is available and builds as `betterspawn-1.0.1.jar`. Some features are experimental;
 see the Wiki for details and limitations.
 
 ## Logos
@@ -51,4 +51,8 @@ see the Wiki for details and limitations.
 
 ## License
 
-All Rights Reserved.
+This project is source-available under the **PolyForm Noncommercial License 1.0.0**.
+You may view, download, modify, and distribute it for noncommercial purposes only.
+Commercial use is not permitted. See [LICENSE](LICENSE) for the full terms.
+
+This is not an OSI-approved open-source license.
