@@ -1,6 +1,7 @@
 package com.proto781m.betterspawn.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
@@ -88,36 +89,57 @@ public final class SpawnPointCommand {
                 .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                         List.of(ctx.getSource().getPlayerOrException()),
                         BlockPos.containing(ctx.getSource().getPosition()),
-                        WorldCoordinates.ZERO_ROTATION))
+                        WorldCoordinates.ZERO_ROTATION, null))
                 .then(Commands.argument("targets", EntityArgument.players())
                         .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                                 EntityArgument.getPlayers(ctx, "targets"),
                                 BlockPos.containing(ctx.getSource().getPosition()),
-                                WorldCoordinates.ZERO_ROTATION))
+                                WorldCoordinates.ZERO_ROTATION, null))
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                                         EntityArgument.getPlayers(ctx, "targets"),
                                         BlockPosArgument.getSpawnablePos(ctx, "pos"),
-                                        WorldCoordinates.ZERO_ROTATION))
+                                        WorldCoordinates.ZERO_ROTATION, null))
                                 .then(Commands.argument("rotation", RotationArgument.rotation())
                                         .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                                                 EntityArgument.getPlayers(ctx, "targets"),
                                                 BlockPosArgument.getSpawnablePos(ctx, "pos"),
-                                                RotationArgument.getRotation(ctx, "rotation")))))));
+                                                RotationArgument.getRotation(ctx, "rotation"), null))
+                                        .then(CommandSupport.dimensionArgument("dimension")
+                                                .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                                        EntityArgument.getPlayers(ctx, "targets"),
+                                                        BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                        RotationArgument.getRotation(ctx, "rotation"),
+                                                        CommandSupport.dimension(ctx, "dimension")))))
+                                .then(Commands.argument("angle", FloatArgumentType.floatArg())
+                                        .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                WorldCoordinates.absolute(new Vec2(0.0F,
+                                                        FloatArgumentType.getFloat(ctx, "angle"))), null))
+                                        .then(CommandSupport.dimensionArgument("dimension")
+                                                .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                                        EntityArgument.getPlayers(ctx, "targets"),
+                                                        BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                        WorldCoordinates.absolute(new Vec2(0.0F,
+                                                                FloatArgumentType.getFloat(ctx, "angle"))),
+                                                        CommandSupport.dimension(ctx, "dimension"))))))));
     }
 
     private static int setVanillaSpawnPoint(CommandSourceStack source, Collection<ServerPlayer> targets,
-                                             BlockPos pos, Coordinates rotation) {
+                                             BlockPos pos, Coordinates rotation, ResourceKey<Level> dimension) {
         Vec2 rot = rotation.getRotation(source);
-        ResourceKey<Level> dimension = source.getLevel().dimension();
+        ResourceKey<Level> actualDimension = dimension != null
+                ? dimension
+                : source.getLevel().dimension();
         for (ServerPlayer target : targets) {
-            PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, dimension, pos, rot.y));
+            PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, actualDimension, pos, rot.y));
             if (BetterSpawnConfig.SYNC_VANILLA_NBT.get()) {
                 // Keep the vanilla NBT mirror in sync, then restore the explicit command angle.
                 target.setRespawnPosition(new ServerPlayer.RespawnConfig(
                         net.minecraft.world.level.storage.LevelData.RespawnData.of(
-                                dimension, pos, rot.y, rot.x), true), false);
-                PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, dimension, pos, rot.y));
+                                actualDimension, pos, rot.y, rot.x), true), false);
+                PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, actualDimension, pos, rot.y));
             }
         }
         Component message = Component.translatable("betterspawn.msg.spawnpoint.set",

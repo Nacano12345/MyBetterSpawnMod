@@ -125,7 +125,12 @@ public final class SetWorldSpawnCommand {
                         .then(Commands.argument("angle", AngleArgument.angle())
                                 .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
                                         BlockPosArgument.getSpawnablePos(ctx, "pos"),
-                                        AngleArgument.getAngle(ctx, "angle"))))));
+                                        AngleArgument.getAngle(ctx, "angle")))
+                                .then(CommandSupport.dimensionArgument("dimension")
+                                        .executes(ctx -> execGlobal(ctx,
+                                                CommandSupport.dimension(ctx, "dimension"),
+                                                BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                AngleArgument.getAngle(ctx, "angle")))))));
     }
 
     // ------------------------------------------------------------------

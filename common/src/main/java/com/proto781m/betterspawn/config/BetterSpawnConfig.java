@@ -66,7 +66,7 @@ public final class BetterSpawnConfig {
                 .comment("Experimental: show the Spawn Dimension button on the single-player/LAN create-world screen. Dedicated servers do not have this screen.")
                 .define("enableSpawnDimensionSelector", true);
         OVERRIDE_VANILLA_COMMANDS = b
-                .comment("Experimental: override the vanilla /spawnpoint and /setworldspawn command roots with BetterSpawn handlers. Requires a server restart; disabled by default.")
+                .comment("Experimental: override the vanilla /spawnpoint and /setworldspawn command roots with BetterSpawn handlers. An optional trailing dimension is accepted. Requires a server restart; disabled by default.")
                 .define("overrideVanillaCommands", false);
         b.pop();
 

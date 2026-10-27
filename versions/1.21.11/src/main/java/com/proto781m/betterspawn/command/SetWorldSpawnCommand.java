@@ -1,6 +1,7 @@
 package com.proto781m.betterspawn.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.proto781m.betterspawn.data.PlayerSpawnData;
@@ -130,7 +131,23 @@ public final class SetWorldSpawnCommand {
                                             .getRotation(ctx.getSource());
                                     return execGlobal(ctx, CommandSupport.currentDimension(ctx),
                                             BlockPosArgument.getSpawnablePos(ctx, "pos"), rotation.y);
-                                }))));
+                                })
+                                .then(CommandSupport.dimensionArgument("dimension")
+                                        .executes(ctx -> {
+                                            Vec2 rotation = RotationArgument.getRotation(ctx, "rotation")
+                                                    .getRotation(ctx.getSource());
+                                            return execGlobal(ctx, CommandSupport.dimension(ctx, "dimension"),
+                                                    BlockPosArgument.getSpawnablePos(ctx, "pos"), rotation.y);
+                                        })))
+                        .then(Commands.argument("angle", FloatArgumentType.floatArg())
+                                .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                                        BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                        FloatArgumentType.getFloat(ctx, "angle")))
+                                .then(CommandSupport.dimensionArgument("dimension")
+                                        .executes(ctx -> execGlobal(ctx,
+                                                CommandSupport.dimension(ctx, "dimension"),
+                                                BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                FloatArgumentType.getFloat(ctx, "angle")))))));
     }
 
     // ------------------------------------------------------------------

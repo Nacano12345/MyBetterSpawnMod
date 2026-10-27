@@ -19,7 +19,8 @@ It is built around three ideas:
 - **Configurable command spawn modes** — exact vanilla-style positions, bed/anchor-like
   safety searches, or the dimension's world-spawn template search.
 - **Experimental vanilla command overrides** — optionally route `/spawnpoint` and
-  `/setworldspawn` through BetterSpawn while preserving their vanilla syntax.
+  `/setworldspawn` through BetterSpawn while preserving their vanilla syntax, with an
+  optional trailing dimension matching the BetterSpawn setter style.
 
 ## Downloads
 

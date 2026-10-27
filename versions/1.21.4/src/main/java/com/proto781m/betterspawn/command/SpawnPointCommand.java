@@ -81,30 +81,38 @@ public final class SpawnPointCommand {
                 .requires(src -> src.hasPermission(2))
                 .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                         List.of(ctx.getSource().getPlayerOrException()),
-                        BlockPos.containing(ctx.getSource().getPosition()), 0.0F))
+                        BlockPos.containing(ctx.getSource().getPosition()), 0.0F, null))
                 .then(Commands.argument("targets", EntityArgument.players())
                         .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                                 EntityArgument.getPlayers(ctx, "targets"),
-                                BlockPos.containing(ctx.getSource().getPosition()), 0.0F))
+                                BlockPos.containing(ctx.getSource().getPosition()), 0.0F, null))
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                                         EntityArgument.getPlayers(ctx, "targets"),
-                                        BlockPosArgument.getSpawnablePos(ctx, "pos"), 0.0F))
+                                        BlockPosArgument.getSpawnablePos(ctx, "pos"), 0.0F, null))
                                 .then(Commands.argument("angle", AngleArgument.angle())
                                         .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
                                                 EntityArgument.getPlayers(ctx, "targets"),
                                                 BlockPosArgument.getSpawnablePos(ctx, "pos"),
-                                                AngleArgument.getAngle(ctx, "angle")))))));
+                                                AngleArgument.getAngle(ctx, "angle"), null))
+                                        .then(CommandSupport.dimensionArgument("dimension")
+                                                .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                                        EntityArgument.getPlayers(ctx, "targets"),
+                                                        BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                        AngleArgument.getAngle(ctx, "angle"),
+                                                        CommandSupport.dimension(ctx, "dimension"))))))));
     }
 
     private static int setVanillaSpawnPoint(CommandSourceStack source, Collection<ServerPlayer> targets,
-                                             BlockPos pos, float angle) {
-        ResourceKey<Level> dimension = source.getLevel().dimension();
+                                             BlockPos pos, float angle, ResourceKey<Level> dimension) {
+        ResourceKey<Level> actualDimension = dimension != null
+                ? dimension
+                : source.getLevel().dimension();
         for (ServerPlayer target : targets) {
-            PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, dimension, pos, angle));
+            PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, actualDimension, pos, angle));
             if (BetterSpawnConfig.SYNC_VANILLA_NBT.get()) {
-                target.setRespawnPosition(dimension, pos, angle, true, false);
-                PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, dimension, pos, angle));
+                target.setRespawnPosition(actualDimension, pos, angle, true, false);
+                PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, actualDimension, pos, angle));
             }
         }
         Component message = Component.translatable("betterspawn.msg.spawnpoint.set",
