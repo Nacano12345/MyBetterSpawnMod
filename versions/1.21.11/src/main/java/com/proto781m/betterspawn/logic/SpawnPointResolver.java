@@ -5,6 +5,7 @@ import com.proto781m.betterspawn.api.ResolveResult;
 import com.proto781m.betterspawn.api.SearchTrace;
 import com.proto781m.betterspawn.api.SpawnContext;
 import com.proto781m.betterspawn.config.BetterSpawnConfig;
+import com.proto781m.betterspawn.config.CommandSpawnMode;
 import com.proto781m.betterspawn.config.NoPersonalSpawnBehavior;
 import com.proto781m.betterspawn.config.RespawnPolicy;
 import com.proto781m.betterspawn.data.PlayerSpawnData;
@@ -16,7 +17,9 @@ import com.proto781m.betterspawn.resolver.SpawnMethodResolver;
 import com.proto781m.betterspawn.template.SpawnRule;
 import com.proto781m.betterspawn.template.SpawnTemplateManager;
 import com.proto781m.betterspawn.util.SafePosFinder;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -152,11 +155,80 @@ public final class SpawnPointResolver {
         }
         SpawnSlot slot = slotOpt.get();
         ServerLevel level = server.getLevel(slot.dimension());
-        BlockPos safe = findSafe(level, slot.pos());
-        if (safe == null) {
-            return null; // The command point is broken: continue to the next layer instead of aborting the chain.
+        if (level == null) {
+            return null;
         }
-        return toResult(new SpawnPoint(safe, slot.dimension(), slot.angle()), "command_slot");
+
+        CommandSpawnMode mode = BetterSpawnConfig.COMMAND_SPAWN_MODE.get();
+        return switch (mode) {
+            case DEFAULT -> toResult(new SpawnPoint(slot.pos(), slot.dimension(), slot.angle()),
+                    "command_slot");
+            case BED_ANCHOR -> commandBedAnchorSearch(level, slot);
+            case WORLDSPAWN -> commandWorldSpawnSearch(level, slot);
+        };
+    }
+
+    private static ResolveResult commandBedAnchorSearch(ServerLevel level, SpawnSlot slot) {
+        BlockPos safe = SafePosFinder.findSafeAround(level, slot.pos(), 3);
+        if (safe == null) {
+            return null;
+        }
+        return toResult(new SpawnPoint(safe, slot.dimension(), slot.angle()),
+                "command_slot_bed_anchor");
+    }
+
+    private static ResolveResult commandWorldSpawnSearch(ServerLevel level, SpawnSlot slot) {
+        Optional<SpawnRule> baseOpt = SpawnTemplateManager.get(slot.dimension());
+        if (baseOpt.isEmpty()) {
+            return null;
+        }
+        SpawnRule base = baseOpt.get();
+        SpawnRule centered = centeredRule(base, slot.pos());
+        long timeout = Math.max(1, BetterSpawnConfig.SEARCH_TIMEOUT_TICKS.get()) * 50L;
+        ResolveResult result = resolveRule(level, centered, level.getSeed(), false,
+                System.currentTimeMillis() + timeout, new SearchTrace());
+        if (result.pos() == null || result.status() == ResolveResult.Status.UNSAFE) {
+            return null;
+        }
+        return new ResolveResult(result.pos(), slot.dimension(), slot.angle(),
+                "command_slot_worldspawn", result.fallbackUsed(), result.elapsedMillis(),
+                result.samples(), result.maxRadiusReached(), result.status(), result.warnings());
+    }
+
+    private static SpawnRule centeredRule(SpawnRule base, BlockPos center) {
+        Map<String, Object> params = new HashMap<>(base.parameters());
+        switch (base.method()) {
+            case "fixed" -> {
+                params.put("x", center.getX());
+                params.put("y", center.getY());
+                params.put("z", center.getZ());
+            }
+            case "platform" -> {
+                params.put("x", center.getX());
+                params.put("y", center.getY() - 1);
+                params.put("z", center.getZ());
+            }
+            case "portal_type" -> {
+                params.put("center_x", center.getX());
+                params.put("center_z", center.getZ());
+                params.put("platform_x", center.getX());
+                params.put("platform_y", center.getY() - 1);
+                params.put("platform_z", center.getZ());
+            }
+            default -> {
+                params.put("center_x", center.getX());
+                params.put("center_z", center.getZ());
+            }
+        }
+
+        Map<String, Object> fallbackParams = new HashMap<>(base.fallbackParameters());
+        if ("platform".equals(base.fallback())) {
+            fallbackParams.put("x", center.getX());
+            fallbackParams.put("y", center.getY() - 1);
+            fallbackParams.put("z", center.getZ());
+        }
+
+        return new SpawnRule(base.dimension(), base.method(), params, base.fallback(), fallbackParams);
     }
 
     private static ResolveResult bedAnchorResult(ServerPlayer player, MinecraftServer server) {

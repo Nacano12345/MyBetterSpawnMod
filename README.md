@@ -16,6 +16,8 @@ It is built around three ideas:
 - **Testable search methods** — eight built-in methods, including overworld land search,
   Nether portal-site search, cave search, floating-island search, water-world search, and
   a platform fallback, plus a sandbox command for testing rules without committing them.
+- **Configurable command spawn modes** — exact vanilla-style positions, bed/anchor-like
+  safety searches, or the dimension's world-spawn template search.
 
 ## Downloads
 

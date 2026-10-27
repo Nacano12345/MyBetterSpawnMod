@@ -11,6 +11,7 @@ public final class BetterSpawnConfig {
     public static final ModConfigSpec SPEC;
 
     public static final ModConfigSpec.EnumValue<RespawnPolicy> RESPAWN_POLICY;
+    public static final ModConfigSpec.EnumValue<CommandSpawnMode> COMMAND_SPAWN_MODE;
     public static final ModConfigSpec.EnumValue<NoPersonalSpawnBehavior> NO_PERSONAL_SPAWN;
     public static final ModConfigSpec.BooleanValue SYNC_VANILLA_NBT;
     public static final ModConfigSpec.IntValue FALLBACK_MAX_DEPTH;
@@ -27,6 +28,9 @@ public final class BetterSpawnConfig {
         RESPAWN_POLICY = b
                 .comment("Respawn priority: COMMAND_OVER_BED = command spawn before bed; BED_OVER_COMMAND = bed/anchor first.")
                 .defineEnum("respawnPolicy", RespawnPolicy.COMMAND_OVER_BED);
+        COMMAND_SPAWN_MODE = b
+                .comment("Command spawn handling: DEFAULT = exact /spawnpoint position; BED_ANCHOR = search a small safe area like a bed/anchor; WORLDSPAWN = run the dimension spawn template centered on the command point.")
+                .defineEnum("commandSpawnMode", CommandSpawnMode.DEFAULT);
         NO_PERSONAL_SPAWN = b
                 .comment("Final fallback when the death dimension has no global spawn either: BACK_TO_OVERWORLD = return to the Overworld; STAY_IN_DEATH_DIMENSION = stay in the death dimension or use vanilla behavior.")
                 .defineEnum("noPersonalSpawnBehavior", NoPersonalSpawnBehavior.BACK_TO_OVERWORLD);
