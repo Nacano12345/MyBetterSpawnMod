@@ -19,6 +19,7 @@ public final class BetterSpawnConfig {
     public static final ModConfigSpec.IntValue MAX_CHUNK_LOADS;
     public static final ModConfigSpec.BooleanValue ENABLE_GOTODIM;
     public static final ModConfigSpec.BooleanValue ENABLE_SPAWN_DIMENSION_SELECTOR;
+    public static final ModConfigSpec.BooleanValue OVERRIDE_VANILLA_COMMANDS;
     public static final ModConfigSpec.BooleanValue ENABLE_DIAGNOSTIC_LOGS;
 
     static {
@@ -64,6 +65,9 @@ public final class BetterSpawnConfig {
         ENABLE_SPAWN_DIMENSION_SELECTOR = b
                 .comment("Experimental: show the Spawn Dimension button on the single-player/LAN create-world screen. Dedicated servers do not have this screen.")
                 .define("enableSpawnDimensionSelector", true);
+        OVERRIDE_VANILLA_COMMANDS = b
+                .comment("Experimental: override the vanilla /spawnpoint and /setworldspawn command roots with BetterSpawn handlers. Requires a server restart; disabled by default.")
+                .define("overrideVanillaCommands", false);
         b.pop();
 
         SPEC = b.build();

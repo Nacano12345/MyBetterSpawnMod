@@ -11,6 +11,8 @@ import java.util.Collection;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.RotationArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -18,6 +20,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec2;
 
 /**
  * {@code /betterspawn worldspawn} subcommands (an extended {@code setworldspawn}).
@@ -109,6 +112,25 @@ public final class SetWorldSpawnCommand {
         }));
 
         dispatcher.register(Commands.literal("betterspawn").then(root));
+    }
+
+    /** Registers vanilla-compatible /setworldspawn overrides when the experimental option is enabled. */
+    public static void registerVanillaOverride(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(Commands.literal("setworldspawn")
+                .requires(src -> src.permissions().hasPermission(
+                        net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
+                .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                        CommandSupport.currentFeet(ctx), 0.0F))
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                                BlockPosArgument.getSpawnablePos(ctx, "pos"), 0.0F))
+                        .then(Commands.argument("rotation", RotationArgument.rotation())
+                                .executes(ctx -> {
+                                    Vec2 rotation = RotationArgument.getRotation(ctx, "rotation")
+                                            .getRotation(ctx.getSource());
+                                    return execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                                            BlockPosArgument.getSpawnablePos(ctx, "pos"), rotation.y);
+                                }))));
     }
 
     // ------------------------------------------------------------------

@@ -18,6 +18,8 @@ It is built around three ideas:
   a platform fallback, plus a sandbox command for testing rules without committing them.
 - **Configurable command spawn modes** — exact vanilla-style positions, bed/anchor-like
   safety searches, or the dimension's world-spawn template search.
+- **Experimental vanilla command overrides** — optionally route `/spawnpoint` and
+  `/setworldspawn` through BetterSpawn while preserving their vanilla syntax.
 
 ## Downloads
 

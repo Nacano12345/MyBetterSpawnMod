@@ -11,6 +11,8 @@ import java.util.Collection;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.AngleArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -109,6 +111,21 @@ public final class SetWorldSpawnCommand {
         }));
 
         dispatcher.register(Commands.literal("betterspawn").then(root));
+    }
+
+    /** Registers vanilla-compatible /setworldspawn overrides when the experimental option is enabled. */
+    public static void registerVanillaOverride(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(Commands.literal("setworldspawn")
+                .requires(src -> src.hasPermission(2))
+                .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                        CommandSupport.currentFeet(ctx), 0.0F))
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                                BlockPosArgument.getSpawnablePos(ctx, "pos"), 0.0F))
+                        .then(Commands.argument("angle", AngleArgument.angle())
+                                .executes(ctx -> execGlobal(ctx, CommandSupport.currentDimension(ctx),
+                                        BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                        AngleArgument.getAngle(ctx, "angle"))))));
     }
 
     // ------------------------------------------------------------------

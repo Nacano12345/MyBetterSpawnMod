@@ -8,9 +8,14 @@ import com.proto781m.betterspawn.data.PlayerSpawnData;
 import com.proto781m.betterspawn.data.SpawnSlot;
 import com.proto781m.betterspawn.data.SpawnSlotType;
 import java.util.Collection;
+import java.util.List;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.Coordinates;
+import net.minecraft.commands.arguments.coordinates.RotationArgument;
+import net.minecraft.commands.arguments.coordinates.WorldCoordinates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -18,6 +23,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.attribute.EnvironmentAttributes;
@@ -72,6 +78,52 @@ public final class SpawnPointCommand {
         return CommandSupport.targetPositionCommand(name,
                 (ctx, targets, pos, angle, dimension) -> execSetSlot(
                         ctx, targets, pos, angle, dimension, type));
+    }
+
+    /** Registers vanilla-compatible /spawnpoint overrides when the experimental option is enabled. */
+    public static void registerVanillaOverride(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(Commands.literal("spawnpoint")
+                .requires(src -> src.permissions().hasPermission(
+                        net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
+                .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                        List.of(ctx.getSource().getPlayerOrException()),
+                        BlockPos.containing(ctx.getSource().getPosition()),
+                        WorldCoordinates.ZERO_ROTATION))
+                .then(Commands.argument("targets", EntityArgument.players())
+                        .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                EntityArgument.getPlayers(ctx, "targets"),
+                                BlockPos.containing(ctx.getSource().getPosition()),
+                                WorldCoordinates.ZERO_ROTATION))
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                        EntityArgument.getPlayers(ctx, "targets"),
+                                        BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                        WorldCoordinates.ZERO_ROTATION))
+                                .then(Commands.argument("rotation", RotationArgument.rotation())
+                                        .executes(ctx -> setVanillaSpawnPoint(ctx.getSource(),
+                                                EntityArgument.getPlayers(ctx, "targets"),
+                                                BlockPosArgument.getSpawnablePos(ctx, "pos"),
+                                                RotationArgument.getRotation(ctx, "rotation")))))));
+    }
+
+    private static int setVanillaSpawnPoint(CommandSourceStack source, Collection<ServerPlayer> targets,
+                                             BlockPos pos, Coordinates rotation) {
+        Vec2 rot = rotation.getRotation(source);
+        ResourceKey<Level> dimension = source.getLevel().dimension();
+        for (ServerPlayer target : targets) {
+            PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, dimension, pos, rot.y));
+            if (BetterSpawnConfig.SYNC_VANILLA_NBT.get()) {
+                // Keep the vanilla NBT mirror in sync, then restore the explicit command angle.
+                target.setRespawnPosition(new ServerPlayer.RespawnConfig(
+                        net.minecraft.world.level.storage.LevelData.RespawnData.of(
+                                dimension, pos, rot.y, rot.x), true), false);
+                PlayerSpawnData.setSlot(target, SpawnSlot.valid(SpawnSlotType.COMMAND, dimension, pos, rot.y));
+            }
+        }
+        Component message = Component.translatable("betterspawn.msg.spawnpoint.set",
+                String.valueOf(targets.size()));
+        source.sendSuccess(() -> message, true);
+        return targets.size();
     }
 
     // ------------------------------------------------------------------
