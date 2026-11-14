@@ -117,6 +117,11 @@ public final class CommandSupport {
         return ctx.getSource().getLevel().dimension();
     }
 
+    /** Returns whether the source has the given command permission level. */
+    public static boolean hasPermission(CommandSourceStack source, int level) {
+        return source.hasPermission(level);
+    }
+
     /** Returns the source position rounded to feet block coordinates. */
     public static BlockPos currentFeet(CommandContext<CommandSourceStack> ctx) {
         Vec3 position = ctx.getSource().getPosition();

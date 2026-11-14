@@ -75,5 +75,20 @@
   "betterspawn.status.fallback": "FALLBACK",
   "betterspawn.status.timeout": "TIMEOUT",
   "betterspawn.status.unsafe": "UNSAFE",
-  "betterspawn.status.empty": "EMPTY"
+  "betterspawn.status.empty": "EMPTY",
+  "betterspawn.msg.offline.list.header": "Recorded offline players:",
+  "betterspawn.msg.offline.list.entry": "%s (%s)",
+  "betterspawn.msg.offline.list.none": "No recorded offline players.",
+  "betterspawn.msg.offline.not_found": "No recorded player '%s'.",
+  "betterspawn.msg.offline.online": "Player '%s' is online; use the online commands instead.",
+  "betterspawn.msg.offline.load_failed": "Could not read player data for '%s'.",
+  "betterspawn.msg.offline.save_failed": "Could not save player data for '%s': %s",
+  "betterspawn.msg.offline.query.header": "Offline spawn data for %s:",
+  "betterspawn.msg.offline.query.none": "  No spawn data recorded.",
+  "betterspawn.msg.offline.query.dimension": "  %s: %s angle=%s",
+  "betterspawn.msg.offline.query.slot": "  %s: %s at %s angle=%s",
+  "betterspawn.msg.offline.worldspawn.set": "Set offline spawn for %s: %s %s angle=%s",
+  "betterspawn.msg.offline.worldspawn.clear": "Cleared offline spawn for %s in %s",
+  "betterspawn.msg.offline.spawnpoint.set": "Set offline %s slot for %s: %s %s angle=%s",
+  "betterspawn.msg.offline.spawnpoint.clear": "Cleared offline %s slots for %s"
 }

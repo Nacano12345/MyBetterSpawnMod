@@ -75,5 +75,20 @@
   "betterspawn.status.fallback": "FALLBACK",
   "betterspawn.status.timeout": "TIMEOUT",
   "betterspawn.status.unsafe": "UNSAFE",
-  "betterspawn.status.empty": "EMPTY"
+  "betterspawn.status.empty": "EMPTY",
+  "betterspawn.msg.offline.list.header": "有记录的离线玩家：",
+  "betterspawn.msg.offline.list.entry": "%s（%s）",
+  "betterspawn.msg.offline.list.none": "没有有记录的离线玩家。",
+  "betterspawn.msg.offline.not_found": "没有找到玩家记录：%s",
+  "betterspawn.msg.offline.online": "玩家 %s 当前在线，请使用在线命令。",
+  "betterspawn.msg.offline.load_failed": "无法读取玩家 %s 的数据。",
+  "betterspawn.msg.offline.save_failed": "无法保存玩家 %s 的数据：%s",
+  "betterspawn.msg.offline.query.header": "%s 的离线出生点数据：",
+  "betterspawn.msg.offline.query.none": "  没有记录的出生点数据。",
+  "betterspawn.msg.offline.query.dimension": "  %s：%s 角度=%s",
+  "betterspawn.msg.offline.query.slot": "  %s：%s 位于 %s 角度=%s",
+  "betterspawn.msg.offline.worldspawn.set": "已设置 %s 在维度 %s 的离线出生点：%s 角度=%s",
+  "betterspawn.msg.offline.worldspawn.clear": "已清除 %s 在维度 %s 的离线出生点。",
+  "betterspawn.msg.offline.spawnpoint.set": "已设置 %s 的离线 %s 槽：%s %s 角度=%s",
+  "betterspawn.msg.offline.spawnpoint.clear": "已清除 %s 的离线 %s 槽。"
 }

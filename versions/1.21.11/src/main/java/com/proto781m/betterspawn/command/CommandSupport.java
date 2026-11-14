@@ -117,6 +117,19 @@ public final class CommandSupport {
         return ctx.getSource().getLevel().dimension();
     }
 
+    /** Returns whether the source has the given command permission level. */
+    public static boolean hasPermission(CommandSourceStack source, int level) {
+        if (level >= 2) {
+            return source.permissions().hasPermission(
+                    net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER);
+        }
+        if (level == 1) {
+            return source.permissions().hasPermission(
+                    net.minecraft.server.permissions.Permissions.COMMANDS_MODERATOR);
+        }
+        return true;
+    }
+
     /** Returns the source position rounded to feet block coordinates. */
     public static BlockPos currentFeet(CommandContext<CommandSourceStack> ctx) {
         Vec3 position = ctx.getSource().getPosition();

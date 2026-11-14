@@ -21,16 +21,20 @@ It is built around three ideas:
 - **Experimental vanilla command overrides** — optionally route `/spawnpoint` and
   `/setworldspawn` through BetterSpawn while preserving their vanilla syntax, with an
   optional trailing dimension matching the BetterSpawn setter style.
+- **Offline player editing** — inspect and edit personal dimension spawns and command /
+  bed / anchor slots in offline player data, with player suggestions from recorded data.
 
 ## Downloads
 
-Release `v1.1.0` contains one jar per supported branch:
+Release `v1.2.0` contains one jar per supported Minecraft/NeoForge version:
 
 | Minecraft | NeoForge | Jar |
 |---|---|---|
-| 1.21–1.21.1 | 21.1.265+ | `betterspawn-1.1.0+1.21.1.jar` |
-| 1.21.4 | 21.4.161+ | `betterspawn-1.1.0+1.21.4.jar` |
-| 1.21.11 | 21.11.48+ | `betterspawn-1.1.0+1.21.11.jar` |
+| 1.21–1.21.1 | 21.1.265+ | `betterspawn-1.2.0+1.21.1.jar` |
+| 1.21.4 | 21.4.161+ | `betterspawn-1.2.0+1.21.4.jar` |
+| 1.21.11 | 21.11.48+ | `betterspawn-1.2.0+1.21.11.jar` |
+
+See the [changelog](CHANGELOG.md) for release notes.
 
 ## Project layout
 
@@ -78,7 +82,7 @@ kept in the **[Wiki](https://github.com/Nacano12345/MyBetterSpawnMod/wiki)**:
 
 ## Status
 
-Source is available and builds as `betterspawn-1.1.0+1.21.11.jar`. Some features are experimental;
+Source is available and builds as `betterspawn-1.2.0+1.21.11.jar`. Some features are experimental;
 see the Wiki for details and limitations.
 
 ## Logos
